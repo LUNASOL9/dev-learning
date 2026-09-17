@@ -18,6 +18,11 @@ function findOpenTickets(tickets, searchText){
 }
 
 
+function findOpenTicketTitles(tickets, searchText){
+    return findOpenTickets(tickets, searchText).map(ticket=> ticket.title)    
+}
+
+
 assert.deepEqual(
     findOpenTickets(tickets, "로그인").map(ticket => ticket.id), [1]
 );
@@ -41,4 +46,17 @@ assert.deepEqual(
 assert.deepEqual(
     findOpenTickets(tickets, undefined).map(ticket => ticket.id), [1, 3]
 );
+
+
+assert.deepEqual(
+    findOpenTicketTitles(tickets, "로그인"), ["로그인 오류"]
+);
+
+
+assert.deepEqual(
+    findOpenTicketTitles(tickets, "없는검색어"), []
+);
+
+
+
 console.log("티켓 검색 테스트 통과");
