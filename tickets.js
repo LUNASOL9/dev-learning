@@ -41,4 +41,4 @@ assert.deepEqual(
 assert.deepEqual(
     findOpenTickets(tickets, undefined).map(ticket => ticket.id), [1, 3]
 );
-console.log("모든 테스트 통과");
+console.log("티켓 검색 테스트 통과");
