@@ -6,7 +6,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "test": "npm run build && node dist/tickets.js"
+    "test": "npm run build && node dist/tickets.test.js"
   },
   "keywords": [],
   "author": "",
