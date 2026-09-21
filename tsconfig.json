@@ -7,5 +7,9 @@
     "outDir": "dist",
     "noEmitOnError": true
   },
-  "include": ["tickets.ts", "tickets.test.ts", "async-demo.ts"]
+  "include": ["tickets.ts", 
+              "tickets.test.ts", 
+              "async-demo.ts", 
+              "http-demo.ts"
+              ]
 }
