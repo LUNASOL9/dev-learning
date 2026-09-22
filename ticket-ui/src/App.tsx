@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import type {Ticket} from "../../tickets";
 import { findOpenTickets } from "../../tickets";
+import TicketItem   from "./TicketItem";
+
 
 const tickets : Ticket[] = [
   { id: 1, title: "로그인 오류", status: "OPEN" },
@@ -32,9 +34,12 @@ const filteredTickets = findOpenTickets(tickets, searchText);
         {filteredTickets.length === 0 ? (<p> 검색 조건에 맞는 미처리 티켓이 없습니다.</p>
         ) : (
           filteredTickets.map(ticket=>(
-          <li key={ticket.id}>
-            {ticket.title} - {ticket.status}
-          </li>
+            <TicketItem key={ticket.id} ticket={ticket}/>           
+          /*
+            <li key={ticket.id}>
+              {ticket.title} - {ticket.status}
+            </li>
+          */
         )))}
       </ul>
 
