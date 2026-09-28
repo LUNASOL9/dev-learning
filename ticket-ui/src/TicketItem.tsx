@@ -1,19 +1,24 @@
 import type { Ticket } from "../../tickets";
 
 type TicketItemProps = {
-    ticket:Ticket
+    ticket:Ticket;
+    onComplete: (TicketId: number) => void; 
 };
 
-
-export default function TicketItem({ticket}: TicketItemProps){ //props는 부모 컴포넌트가 전달한 데이터를 담은 객체
+//-export default function TicketItem({ticket}: TicketItemProps){ //props {ticket}는  부모 컴포넌트가 전달한 데이터를 담은 객체
+export default function TicketItem({ticket, onComplete,}: TicketItemProps){
     
     const statusLabel = ticket.status === "OPEN" ? "미처리" : "처리 완료";
- 
-    
     
     return (
         <li>
             {ticket.title} - {statusLabel}
+
+            <button type="button" onClick={()=> onComplete(ticket.id)}>
+            처리 완료
+            </button>
+        
+        
         </li>
     );
 }

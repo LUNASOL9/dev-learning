@@ -4,8 +4,8 @@ import type {Ticket} from "../../tickets";
 import { findOpenTickets } from "../../tickets";
 import TicketItem   from "./TicketItem";
 
-
-const tickets : Ticket[] = [
+//const tickets : Ticket[] = [
+const initialTickets : Ticket[] = [
   { id: 1, title: "로그인 오류", status: "OPEN" },
   { id: 2, title: "결제 내역 확인", status: "CLOSED" },
   { id: 3, title: "화면 속도 저하", status: "OPEN" },
@@ -13,9 +13,23 @@ const tickets : Ticket[] = [
 
 
 function App(){
+  const [searchText, setSearchText] = useState("");
+  
+  const [tickets, setTickets] = useState<Ticket[]>(initialTickets)
+  const filteredTickets = findOpenTickets(tickets, searchText);
 
-const [searchText, setSearchText] = useState("");
-const filteredTickets = findOpenTickets(tickets, searchText);
+function handleComplete(ticketId:number){
+
+  setTickets(previousTickets =>
+    
+    previousTickets.map(ticket => 
+      ticket.id === ticketId ? { ...ticket, status: "CLOSED"} 
+      : ticket
+    )
+
+  );
+}
+
 
   return (
     <main>
@@ -30,18 +44,19 @@ const filteredTickets = findOpenTickets(tickets, searchText);
       
       <p>검색 결과 {filteredTickets.length}건</p>
     
-      <ul>
-        {filteredTickets.length === 0 ? (<p> 검색 조건에 맞는 미처리 티켓이 없습니다.</p>
+        {filteredTickets.length === 0 ? (
+          <p> 검색 조건에 맞는 미처리 티켓이 없습니다.</p>
         ) : (
-          filteredTickets.map(ticket=>(
-            <TicketItem key={ticket.id} ticket={ticket}/>           
-          /*
-            <li key={ticket.id}>
-              {ticket.title} - {ticket.status}
-            </li>
-          */
-        )))}
-      </ul>
+          <ul>
+            {filteredTickets.map(ticket=>(
+              <TicketItem key={ticket.id} 
+                          ticket={ticket} 
+                          onComplete={handleComplete}
+              />
+            ))}
+          </ul>
+        
+        )}
 
     </main>
   );
