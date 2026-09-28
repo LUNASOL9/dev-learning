@@ -5,6 +5,23 @@ export type Ticket ={
     status: "OPEN" | "CLOSED";
 }
 
+export function filterTickets(
+    tickets: Ticket[], 
+    searchText: string | null | undefined,
+    showCompleted : boolean
+): Ticket[] {
+    const normalizedText  = (searchText ?? "").trim(); //(searchText ?? "") null과 undefined를 빈 검색어로 처리한다
+    
+    const filteredTickets  = tickets.filter(ticket=>{
+        const matchesTitle = ticket.title.includes(normalizedText);
+        const matchesStatus = showCompleted || ticket.status === "OPEN"
+        
+        return matchesTitle && matchesStatus;
+
+    });
+    return filteredTickets    
+}
+
 export function findOpenTickets(
     tickets: Ticket[], 
     searchText: string | null | undefined
