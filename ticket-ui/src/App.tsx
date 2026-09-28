@@ -18,6 +18,11 @@ function App(){
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets)
   const filteredTickets = findOpenTickets(tickets, searchText);
 
+function handleReset(){
+    setSearchText("");
+    setTickets(initialTickets);
+}
+  
 function handleComplete(ticketId:number){
 
   setTickets(previousTickets =>
@@ -34,6 +39,9 @@ function handleComplete(ticketId:number){
   return (
     <main>
       <h1>업무 티켓 관리</h1>
+      <button type="button" onClick={handleReset}>
+        초기 상태로 복원
+      </button>
         <label htmlFor="ticket-search">미처리 티켓 검색</label>
         <input
           id="ticket-search"
