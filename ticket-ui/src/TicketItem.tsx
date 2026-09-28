@@ -14,9 +14,16 @@ export default function TicketItem({ticket, onComplete,}: TicketItemProps){
         <li>
             {ticket.title} - {statusLabel}
 
-            <button type="button" onClick={()=> onComplete(ticket.id)}>
-            처리 완료
+            {ticket.status === "OPEN" && (
+            
+            <button type="button" 
+                    onClick={()=> onComplete(ticket.id)}
+            >
+                처리 완료
             </button>
+
+            )}
+            
         
         
         </li>
