@@ -24,10 +24,13 @@ function isTodoResponse(value : unknown) : value is TodoResponse{
 }
 
 
-export async function fetchTickets(): Promise<Ticket[]> {
+export async function fetchTickets(
+    signal?: AbortSignal
+): Promise<Ticket[]> {
     
      const response = await fetch(
-        "https://jsonplaceholder.typicode.com/todos?userId=1"
+         "https://jsonplaceholder.typicode.com/todos?userId=1",
+         {signal} 
     );
 
     if(!response.ok){

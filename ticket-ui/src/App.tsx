@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect ,useState } from "react";
 
 import type {Ticket} from "../../tickets";
 import { filterTickets } from "../../tickets";
@@ -13,20 +13,53 @@ const initialTickets : Ticket[] = [
   { id: 3, title: "화면 속도 저하", status: "OPEN" },
 ];
 
-
-
-
-
 function App(){
   
   const [searchText, setSearchText] = useState(""); //검색
   const [showCompleted, setShowCompleted] = useState(false);  //완료된 티켓도 보기
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   const filteredTickets = filterTickets(tickets, searchText, showCompleted);
+
+  useEffect(()=>{
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    async function loadInitialTickets() {
+      try {
+        const loadedTickets = await fetchTickets(signal);
+        
+        if(!signal.aborted){
+          setTickets(loadedTickets);
+        }
+
+      } catch (error : unknown){
+
+        if(!signal.aborted){
+          setErrorMessage(
+           error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다."
+          );
+        }
+
+      } finally {
+          if(!signal.aborted){
+            setIsLoading(false);
+          }
+      }
+
+      
+    }//loadInitialTickets
+    
+    void loadInitialTickets();
+    return () => {
+        controller.abort();
+      };
+  },[]);
+
+
 
   async function handleLoad() { //서버에서 불러오기
     setIsLoading(true);
@@ -76,9 +109,10 @@ function handleComplete(ticketId:number){ // 처리 완료
       </button>
       {errorMessage && <p role="alert">{errorMessage}</p>}
 
-      <button type="button" onClick={handleReset}>
+      <button type="button" onClick={handleReset} disabled={isLoading}>
         초기 상태로 복원
       </button>
+
         <label htmlFor="ticket-search">티켓 검색</label>
         <input
           id="ticket-search"
@@ -96,8 +130,14 @@ function handleComplete(ticketId:number){ // 처리 완료
       
       <p>검색 결과 {filteredTickets.length}건</p>
     
-        {filteredTickets.length === 0 ? (
+        { isLoading ? (
+
+          <p role="status">티켓을 불러오는 중입니다.</p>
+        
+        ): filteredTickets.length === 0 ? (
+        
           <p> 검색 조건에 맞는 티켓이 없습니다.</p>
+        
         ) : (
           <ul>
             {filteredTickets.map(ticket=>(
