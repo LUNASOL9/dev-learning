@@ -4,6 +4,8 @@ import type {Ticket} from "../../tickets";
 import { filterTickets } from "../../tickets";
 import TicketItem   from "./TicketItem";
 
+import { fetchTickets } from "./ticket-api";
+
 //const tickets : Ticket[] = [
 const initialTickets : Ticket[] = [
   { id: 1, title: "로그인 오류", status: "OPEN" },
@@ -17,11 +19,33 @@ const initialTickets : Ticket[] = [
 
 function App(){
   
-  const [searchText, setSearchText] = useState("");
-  const [showCompleted, setShowCompleted] = useState(false);  
-  const [tickets, setTickets] = useState<Ticket[]>(initialTickets)
+  const [searchText, setSearchText] = useState(""); //검색
+  const [showCompleted, setShowCompleted] = useState(false);  //완료된 티켓도 보기
+  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const filteredTickets = filterTickets(tickets, searchText, showCompleted);
+
+  async function handleLoad() { //서버에서 불러오기
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try{
+      const loadedTickets = await fetchTickets();
+      setTickets(loadedTickets)
+
+    }catch(error : unknown){
+      setErrorMessage(
+        error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다."
+      );
+
+
+    }finally{
+      setIsLoading(false);
+    }
+  }
 
 
 function handleReset(){ //초기 상태로 복원
@@ -46,6 +70,12 @@ function handleComplete(ticketId:number){ // 처리 완료
   return (
     <main>
       <h1>업무 티켓 관리</h1>
+
+      <button type="button" onClick={handleLoad} disabled={isLoading}>
+          {isLoading ? "불러오는 중..." : "서버에서 불러오기"}
+      </button>
+      {errorMessage && <p role="alert">{errorMessage}</p>}
+
       <button type="button" onClick={handleReset}>
         초기 상태로 복원
       </button>
