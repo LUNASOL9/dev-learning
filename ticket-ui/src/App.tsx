@@ -3,7 +3,7 @@ import { useEffect ,useState } from "react";
 import type {Ticket} from "../../tickets";
 import { filterTickets } from "../../tickets";
 import TicketItem   from "./TicketItem";
-
+import TicketForm from "./TicketForm";
 import { fetchTickets } from "./ticket-api";
 
 //const tickets : Ticket[] = [
@@ -14,8 +14,10 @@ const initialTickets : Ticket[] = [
 ];
 
 function App(){
-  const [newTitle, setNewTitle] = useState("");
-  const [formError, setFormError] = useState("");
+  //const [newTitle, setNewTitle] = useState("");
+  //const [formError, setFormError] = useState("");
+
+  const [formKey, setFormKey] = useState(0); // 티켓 등록
 
   const [searchText, setSearchText] = useState(""); //검색
   const [showCompleted, setShowCompleted] = useState(false);  //완료된 티켓도 보기
@@ -64,19 +66,13 @@ function App(){
 
 
 
-  function handleCreate(){ //새 티켓
-    const title = newTitle.trim();
-
-    if (title.length === 0) {
-      setFormError("제목을 입력해 주세요.");
-      return;
-    }
+  function handleCreate(title:string){ //새 티켓
 
     setTickets(previousTickets =>{
       const nextId = previousTickets.reduce((maxId, ticket)=> Math.max(maxId, ticket.id), 0)+1;
 
       const newTicket: Ticket = {
-        id:nextId,
+        id: nextId,
         title,
         status: "OPEN",
       }
@@ -84,8 +80,6 @@ function App(){
       return [newTicket, ...previousTickets]
     });
     
-    setFormError("");
-    setNewTitle("");
     setSearchText("");
   }//handleCreate
 
@@ -116,8 +110,8 @@ function handleReset(){ //초기 상태로 복원
     setSearchText("");
     setTickets(initialTickets);
     setShowCompleted(false);
-    setNewTitle("");
-    setFormError("");
+   
+    setFormKey(previousKey => previousKey + 1);
 }
   
 function handleComplete(ticketId:number){ // 처리 완료
@@ -137,24 +131,11 @@ function handleComplete(ticketId:number){ // 처리 완료
     <main>
       <h1>업무 티켓 관리</h1>
 
-      <form onSubmit={event => {
-          event.preventDefault();
-          handleCreate();
-        }}
-      >
-        <label htmlFor="new-ticket-title">새 티켓 제목</label>
-        <input id="new-ticket-title" value={newTitle}
-          onChange={event => setNewTitle(event.target.value)}
-          disabled={isLoading}
-        />
-        <button type="submit" disabled={isLoading}>
-          티켓 등록
-        </button>
-
-        {formError && <p role="alert">{formError}</p>}
-
-      </form>
-
+      <TicketForm
+        key={formKey}
+        disabled={isLoading}
+        onCreate={handleCreate}
+      />
 
 
 
