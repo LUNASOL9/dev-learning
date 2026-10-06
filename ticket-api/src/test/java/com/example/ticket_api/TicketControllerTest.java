@@ -5,11 +5,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.annotation.DirtiesContext;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 @WebMvcTest(TicketController.class)
+@DirtiesContext(
+    classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD
+)
 class TicketControllerTest {
 
     @Autowired
@@ -28,4 +33,51 @@ class TicketControllerTest {
             .andExpect(jsonPath("$[0].status").value("OPEN"))
             .andExpect(jsonPath("$[1].status").value("CLOSED"));
     }
+
+    @Test
+    void createsTicketAndIncludesItInList() throws Exception {
+        mockMvc.perform(post("/api/tickets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "  프린터 연결 오류  "}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(4))
+            .andExpect(jsonPath("$.title").value("프린터 연결 오류"))
+            .andExpect(jsonPath("$.status").value("OPEN"));
+
+        mockMvc.perform(get("/api/tickets"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(4))
+            .andExpect(jsonPath("$[3].id").value(4))
+            .andExpect(jsonPath("$[3].title").value("프린터 연결 오류"));
+    }
+
+    @Test
+    void rejectsBlankTitle() throws Exception {
+        mockMvc.perform(post("/api/tickets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "   "}
+                    """))
+            .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/tickets"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3));
+    }
+
+    @Test
+    void rejectsMissingTitle() throws Exception {
+        mockMvc.perform(post("/api/tickets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/tickets"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3));
+    }
+
+
 }
