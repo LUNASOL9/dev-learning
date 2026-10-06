@@ -2,7 +2,7 @@ import { useState } from "react";
 
 type TicketFormProps = {
     disabled: boolean;
-    onCreate: (title: string) => void;
+    onCreate: (title: string) => Promise<void>;
 }
 
 
@@ -14,7 +14,7 @@ export default function TicketForm ({
     const [newTitle, setNewTitle] = useState("");
     const [formError, setFormError] = useState("");
 
-    function handleSubmit(){
+    async function handleSubmit(){
         if(disabled){
             return;
         }
@@ -25,18 +25,23 @@ export default function TicketForm ({
             setFormError("제목을 입력해 주세요.");
             return;
         }
-
-        onCreate(title);
+        try{
+            await onCreate(title);
+            setNewTitle("");
+        }catch(error: unknown){
+            setFormError(
+                error instanceof Error ? error.message:"티켓 등록 중 오류가 발생했습니다."
+            );
+        }
 
         setFormError("");
-        setNewTitle("");        
 
     }//handleSubmit
 
     return(
         <form onSubmit={event=>{
             event.preventDefault();
-            handleSubmit();
+            void handleSubmit();
         }}
         >
         

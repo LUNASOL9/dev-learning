@@ -4,7 +4,7 @@ import type {Ticket} from "../../tickets";
 import { filterTickets } from "../../tickets";
 import TicketItem   from "./TicketItem";
 import TicketForm from "./TicketForm";
-import { fetchTickets } from "./ticket-api";
+import { fetchTickets, createTicket } from "./ticket-api";
 
 import {Routes, Route, Link} from "react-router";
 import TicketDetail from "./TicketDetail";
@@ -20,6 +20,7 @@ function App(){
   //const [newTitle, setNewTitle] = useState("");
   //const [formError, setFormError] = useState("");
 
+  const[isSaving, setIsSaving] = useState(false);
   const [formKey, setFormKey] = useState(0); // 티켓 등록
 
   const [searchText, setSearchText] = useState(""); //검색
@@ -69,8 +70,26 @@ function App(){
 
 
 
-  function handleCreate(title:string){ //새 티켓
+  async function handleCreate(title:string){ //새 티켓
 
+    setIsSaving(true);
+
+    try{
+      const createdTicket = await createTicket(title);
+
+      setTickets(previousTickets => [
+        createdTicket,
+        ...previousTickets,
+      ]);
+
+      setSearchText("");
+
+
+    }finally{
+      setIsSaving(false);
+    }
+
+    /*
     setTickets(previousTickets =>{
       const nextId = previousTickets.reduce((maxId, ticket)=> Math.max(maxId, ticket.id), 0)+1;
 
@@ -79,10 +98,10 @@ function App(){
         title,
         status: "OPEN",
       }
-      
       return [newTicket, ...previousTickets]
     });
-    
+    */
+
     setSearchText("");
   }//handleCreate
 
@@ -140,16 +159,17 @@ function handleComplete(ticketId:number){ // 처리 완료
             
             <TicketForm
               key={formKey}
-              disabled={isLoading}
+              disabled={isLoading || isSaving}
               onCreate={handleCreate}
             />
+            {isSaving && <p role="status">티켓을 등록하는 중입니다.</p>}
 
-            <button type="button" onClick={handleLoad} disabled={isLoading}>
+            <button type="button" onClick={handleLoad} disabled={isLoading || isSaving}>
                 {isLoading ? "불러오는 중..." : "서버에서 불러오기"}
             </button>
             {errorMessage && <p role="alert">{errorMessage}</p>}
 
-            <button type="button" onClick={handleReset} disabled={isLoading}>
+            <button type="button" onClick={handleReset} disabled={isLoading || isSaving}>
               초기 상태로 복원
             </button>
 
