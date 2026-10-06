@@ -1,4 +1,5 @@
 import type { Ticket } from "../../tickets";
+import {Link} from "react-router";
 
 type TicketItemProps = {
     ticket:Ticket;
@@ -12,7 +13,11 @@ export default function TicketItem({ticket, onComplete,}: TicketItemProps){
     
     return (
         <li>
-            {ticket.title} - {statusLabel}
+            <Link to={`/tickets/${ticket.id}`}>
+                {ticket.title}
+            </Link> 
+            {" - "} 
+            {statusLabel}
 
             {ticket.status === "OPEN" && (
             

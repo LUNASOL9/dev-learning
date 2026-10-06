@@ -6,6 +6,9 @@ import TicketItem   from "./TicketItem";
 import TicketForm from "./TicketForm";
 import { fetchTickets } from "./ticket-api";
 
+import {Routes, Route, Link} from "react-router";
+import TicketDetail from "./TicketDetail";
+
 //const tickets : Ticket[] = [
 const initialTickets : Ticket[] = [
   { id: 1, title: "로그인 오류", status: "OPEN" },
@@ -128,64 +131,87 @@ function handleComplete(ticketId:number){ // 처리 완료
 
 
   return (
-    <main>
-      <h1>업무 티켓 관리</h1>
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <main>
+            <h1>업무 티켓 관리</h1>
+            
+            <TicketForm
+              key={formKey}
+              disabled={isLoading}
+              onCreate={handleCreate}
+            />
 
-      <TicketForm
-        key={formKey}
-        disabled={isLoading}
-        onCreate={handleCreate}
+            <button type="button" onClick={handleLoad} disabled={isLoading}>
+                {isLoading ? "불러오는 중..." : "서버에서 불러오기"}
+            </button>
+            {errorMessage && <p role="alert">{errorMessage}</p>}
+
+            <button type="button" onClick={handleReset} disabled={isLoading}>
+              초기 상태로 복원
+            </button>
+
+              <label htmlFor="ticket-search">티켓 검색</label>
+              <input
+                id="ticket-search"
+                value = {searchText}
+                onChange={event => setSearchText(event.target.value)}
+                placeholder="제목을 입력하세요"
+              />
+
+              <label>
+                <input type="checkbox" 
+                      checked={showCompleted}
+                      onChange={event=>setShowCompleted(event.target.checked)}
+                /> 완료된 티켓도 보기
+              </label>
+            
+            <p>검색 결과 {filteredTickets.length}건</p>
+          
+              { isLoading ? (
+                <p role="status">티켓을 불러오는 중입니다.</p>              
+              ): filteredTickets.length === 0 ? (              
+                <p> 검색 조건에 맞는 티켓이 없습니다.</p>              
+              ) : (
+                <ul>
+                  {filteredTickets.map(ticket=>(
+                    <TicketItem key={ticket.id} 
+                                ticket={ticket} 
+                                onComplete={handleComplete}
+                    />
+                  ))}
+                </ul>              
+              )}
+          </main>
+      }
+      />
+
+
+      <Route
+        path="/tickets/:ticketId"
+        element={<TicketDetail
+                tickets={tickets}
+                isLoading={isLoading}
+                errorMessage={errorMessage}
+        />}
+      />
+
+
+      <Route
+        path="*"
+        element={
+          <main>
+            <h1>페이지를 찾을 수 없습니다.</h1>
+            <Link to ="/">목록으로</Link>
+          </main>
+        }
       />
 
 
 
-      <button type="button" onClick={handleLoad} disabled={isLoading}>
-          {isLoading ? "불러오는 중..." : "서버에서 불러오기"}
-      </button>
-      {errorMessage && <p role="alert">{errorMessage}</p>}
-
-      <button type="button" onClick={handleReset} disabled={isLoading}>
-        초기 상태로 복원
-      </button>
-
-        <label htmlFor="ticket-search">티켓 검색</label>
-        <input
-          id="ticket-search"
-          value = {searchText}
-          onChange={event => setSearchText(event.target.value)}
-          placeholder="제목을 입력하세요"
-        />
-
-        <label>
-          <input type="checkbox" 
-                 checked={showCompleted}
-                 onChange={event=>setShowCompleted(event.target.checked)}
-          /> 완료된 티켓도 보기
-        </label>
-      
-      <p>검색 결과 {filteredTickets.length}건</p>
-    
-        { isLoading ? (
-
-          <p role="status">티켓을 불러오는 중입니다.</p>
-        
-        ): filteredTickets.length === 0 ? (
-        
-          <p> 검색 조건에 맞는 티켓이 없습니다.</p>
-        
-        ) : (
-          <ul>
-            {filteredTickets.map(ticket=>(
-              <TicketItem key={ticket.id} 
-                          ticket={ticket} 
-                          onComplete={handleComplete}
-              />
-            ))}
-          </ul>
-        
-        )}
-
-    </main>
+    </Routes>
   );
 };
 
