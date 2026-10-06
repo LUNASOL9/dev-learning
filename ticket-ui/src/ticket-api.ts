@@ -1,12 +1,7 @@
 import type { Ticket } from "../../tickets";
 
-type TodoResponse = {
-    id: number,
-    title: string;
-    completed: boolean;
-}
 
-function isTodoResponse(value : unknown) : value is TodoResponse{
+function isTicket(value : unknown) : value is Ticket{
     
     return (
         typeof value === "object" &&
@@ -18,8 +13,8 @@ function isTodoResponse(value : unknown) : value is TodoResponse{
         "title" in value &&
         typeof value.title === "string" &&
         
-        "completed" in value &&
-        typeof value.completed === "boolean"
+        "status" in value &&
+        (value.status === "OPEN" || value.status === "CLOSED")
     );
 }
 
@@ -29,7 +24,7 @@ export async function fetchTickets(
 ): Promise<Ticket[]> {
     
      const response = await fetch(
-         "https://jsonplaceholder.typicode.com/todos?userId=1",
+         "/api/tickets",
          {signal} 
     );
 
@@ -45,15 +40,11 @@ export async function fetchTickets(
 
     return data.map((item : unknown): Ticket => {
 
-        if(!isTodoResponse(item)){
+        if(!isTicket(item)){
              throw new Error("티켓 데이터 형식이 올바르지 않습니다.");
         }
 
-        return {
-            id: item.id,
-            title: item.title,
-            status: item.completed ? "CLOSED" : "OPEN",
-        };
+        return item;
 
     });
 }//function
