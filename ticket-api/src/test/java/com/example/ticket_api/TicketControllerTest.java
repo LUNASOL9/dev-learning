@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+
 @WebMvcTest(TicketController.class)
 @DirtiesContext(
     classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD
@@ -79,5 +81,52 @@ class TicketControllerTest {
             .andExpect(jsonPath("$.length()").value(3));
     }
 
+    @Test
+    void completesTicketAndKeepsStatusInList() throws Exception {
+        mockMvc.perform(patch("/api/tickets/1/complete"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.title").value("로그인 오류"))
+            .andExpect(jsonPath("$.status").value("CLOSED"));
 
-}
+        mockMvc.perform(get("/api/tickets"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$[0].status").value("CLOSED"))
+            .andExpect(jsonPath("$[2].status").value("OPEN"));
+    }
+
+    @Test
+    void completingTwiceKeepsTicketClosed() throws Exception {
+        mockMvc.perform(patch("/api/tickets/1/complete"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CLOSED"));
+
+        mockMvc.perform(patch("/api/tickets/1/complete"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.status").value("CLOSED"));
+
+        mockMvc.perform(get("/api/tickets"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3));
+    }
+
+
+
+    @Test
+    void returnsNotFoundForMissingTicket() throws Exception {
+        mockMvc.perform(patch("/api/tickets/999/complete"))
+            .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/tickets"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$[0].status").value("OPEN"))
+            .andExpect(jsonPath("$[2].status").value("OPEN"));
+    }
+
+
+
+
+}//class

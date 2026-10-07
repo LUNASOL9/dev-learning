@@ -25,6 +25,9 @@ export default function TicketForm ({
             setFormError("제목을 입력해 주세요.");
             return;
         }
+
+        setFormError("");
+
         try{
             await onCreate(title);
             setNewTitle("");
@@ -34,7 +37,6 @@ export default function TicketForm ({
             );
         }
 
-        setFormError("");
 
     }//handleSubmit
 

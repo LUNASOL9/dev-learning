@@ -4,32 +4,37 @@ import type {Ticket} from "../../tickets";
 import { filterTickets } from "../../tickets";
 import TicketItem   from "./TicketItem";
 import TicketForm from "./TicketForm";
-import { fetchTickets, createTicket } from "./ticket-api";
+import { fetchTickets, createTicket, completeTicket } from "./ticket-api";
 
 import {Routes, Route, Link} from "react-router";
 import TicketDetail from "./TicketDetail";
 
 //const tickets : Ticket[] = [
+/*
 const initialTickets : Ticket[] = [
   { id: 1, title: "로그인 오류", status: "OPEN" },
   { id: 2, title: "결제 내역 확인", status: "CLOSED" },
   { id: 3, title: "화면 속도 저하", status: "OPEN" },
 ];
+*/
+
 
 function App(){
-  //const [newTitle, setNewTitle] = useState("");
-  //const [formError, setFormError] = useState("");
+
+  const [completingId, setCompletingId] = useState<number | null>(null);
+  const [completeError, setCompleteError] = useState("");
 
   const[isSaving, setIsSaving] = useState(false);
   const [formKey, setFormKey] = useState(0); // 티켓 등록
 
   const [searchText, setSearchText] = useState(""); //검색
   const [showCompleted, setShowCompleted] = useState(false);  //완료된 티켓도 보기
-  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const isBusy = isLoading || isSaving || completingId != null;//조회·등록·완료 요청 중 하나라도 진행 중인지
   const filteredTickets = filterTickets(tickets, searchText, showCompleted);
 
   useEffect(()=>{
@@ -111,6 +116,7 @@ function App(){
   async function handleLoad() { //서버에서 불러오기
     setIsLoading(true);
     setErrorMessage("");
+    setCompleteError("");
 
     try{
       const loadedTickets = await fetchTickets();
@@ -130,23 +136,52 @@ function App(){
 
 function handleReset(){ //초기 상태로 복원
     setSearchText("");
-    setTickets(initialTickets);
     setShowCompleted(false);
+    setCompleteError("");
    
     setFormKey(previousKey => previousKey + 1);
 }
   
-function handleComplete(ticketId:number){ // 처리 완료
+async function handleComplete(ticketId:number) :Promise<void>{ // 처리 완료
 
+  if(isBusy){
+    return;
+  }
+
+    setCompletingId(ticketId);
+    setCompleteError("");
+
+    try{
+      const completedTicket = await completeTicket(ticketId);
+
+      setTickets( previousTickets =>
+        previousTickets.map(ticket =>
+          ticket.id === completedTicket.id
+        ? completedTicket
+        : ticket
+        )
+      );
+
+
+    }catch(error:unknown){
+      setCompleteError(
+        error instanceof Error ? error.message : "티켓 완료 처리 중 오류가 발생했습니다."
+      );
+    }finally{
+      setCompletingId(null);
+    }
+
+
+  /*
   setTickets(previousTickets =>
     
     previousTickets.map(ticket => 
       ticket.id === ticketId ? { ...ticket, status: "CLOSED"} 
       : ticket
     )
-
   );
-}
+  */
+}// handleComplete
 
 
   return (
@@ -159,18 +194,20 @@ function handleComplete(ticketId:number){ // 처리 완료
             
             <TicketForm
               key={formKey}
-              disabled={isLoading || isSaving}
+              disabled={isBusy}
               onCreate={handleCreate}
             />
             {isSaving && <p role="status">티켓을 등록하는 중입니다.</p>}
 
-            <button type="button" onClick={handleLoad} disabled={isLoading || isSaving}>
+            <button type="button" onClick={handleLoad} disabled={isBusy}>
                 {isLoading ? "불러오는 중..." : "서버에서 불러오기"}
             </button>
-            {errorMessage && <p role="alert">{errorMessage}</p>}
 
-            <button type="button" onClick={handleReset} disabled={isLoading || isSaving}>
-              초기 상태로 복원
+            {errorMessage && <p role="alert">{errorMessage}</p>}
+            {completeError && <p role="alert">{completeError}</p>}
+
+            <button type="button" onClick={handleReset} disabled={isBusy}>
+              입력 및 검색 초기화
             </button>
 
               <label htmlFor="ticket-search">티켓 검색</label>
@@ -200,6 +237,8 @@ function handleComplete(ticketId:number){ // 처리 완료
                     <TicketItem key={ticket.id} 
                                 ticket={ticket} 
                                 onComplete={handleComplete}
+                                disabled={isBusy}
+                                isCompleting={completingId === ticket.id}
                     />
                   ))}
                 </ul>              

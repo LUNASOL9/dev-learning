@@ -71,3 +71,25 @@ export async function createTicket(title:string): Promise<Ticket>{
 
     return data;
 }//function
+
+export async function completeTicket(ticketId:number) :Promise<Ticket> {
+
+    const response = await fetch(
+        `/api/tickets/${ticketId}/complete`,
+        {
+            method: "PATCH",
+        }
+    );
+
+    if(!response.ok){
+        throw new Error(`티켓 완료 처리 실패: ${response.status}`)
+    }
+
+    const data:unknown = await response.json();
+
+    if(!isTicket(data)){
+        throw new Error("완료 응답의 티켓 형식이 올바르지 않습니다.");
+    }
+
+    return data;
+}//function
