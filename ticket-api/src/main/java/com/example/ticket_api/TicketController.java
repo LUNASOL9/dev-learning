@@ -12,77 +12,30 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
-@RestController 
-@RequestMapping ("/api/tickets")
+@RestController
+@RequestMapping("/api/tickets")
 public class TicketController {
-    
-    
-    private final List<Ticket> tickets = new ArrayList<>(List.of(
-            new Ticket(1L, "로그인 오류", "OPEN"),
-            new Ticket(2L, "결제 내역 확인", "CLOSED"),
-            new Ticket(3L, "화면 속도 저하", "OPEN")
-    ));
 
-    @GetMapping
-    public synchronized List<Ticket> findAll(){
-        return List.copyOf(tickets);
+    private final TicketService ticketService;
+
+    public TicketController(TicketService ticketService) {
+        this.ticketService = ticketService;
     }
 
+    @GetMapping
+    public List<Ticket> findAll() {
+        return ticketService.findAll();
+    }
 
-    private long nextId = 4L;
-    @PostMapping 
-    @ResponseStatus (HttpStatus.CREATED)
-    public synchronized Ticket create(@RequestBody CreateTicketRequest request) {
-        
-        String title = request.title();
-
-        if (title == null || title.isBlank()) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "티켓 제목을 입력해 주세요."
-            );
-        }
-
-        Ticket ticket = new Ticket(
-            nextId++,
-            title.strip(),
-            "OPEN"
-        );
-
-        tickets.add(ticket);
-
-        return ticket;
-    } //create
-
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Ticket create(@RequestBody CreateTicketRequest request) {
+        return ticketService.create(request.title());
+    }
 
     @PatchMapping("/{ticketId}/complete")
-    public synchronized Ticket complete(
-        @PathVariable("ticketId") long ticketId
-    ){
-
-        for(int i =0; i< tickets.size(); i++){
-            Ticket ticket = tickets.get(i);
-
-            if(ticket.id() == ticketId){
-                Ticket completedTicket  = new Ticket(
-                    ticket.id(),
-                    ticket.title(),
-                    "CLOSED"
-                );
-
-                tickets.set(i, completedTicket );
-                return completedTicket;
-            }//if
-        }//for
-
-        throw new ResponseStatusException(
-            HttpStatus.NOT_FOUND, //404
-            "티켓을 찾을 수 없습니다."
-        );
-    }//complete
-
-
-    
+    public Ticket complete(@PathVariable("ticketId") long ticketId) {
+        return ticketService.complete(ticketId);
+    }
 }//class
