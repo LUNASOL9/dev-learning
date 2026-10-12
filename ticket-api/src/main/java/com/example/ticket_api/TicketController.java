@@ -1,6 +1,5 @@
 package com.example.ticket_api;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
