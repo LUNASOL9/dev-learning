@@ -60,11 +60,15 @@ class TicketControllerTest {
     @Test
     void rejectsBlankTitle() throws Exception {
         mockMvc.perform(post("/api/tickets")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {"title": "   "}
-                    """))
-            .andExpect(status().isBadRequest());
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {"title": "   "}
+            """))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(
+            MediaType.APPLICATION_JSON
+        ))
+        .andExpect(jsonPath("$.message").value("티켓 제목을 입력해 주세요."));
 
         mockMvc.perform(get("/api/tickets"))
             .andExpect(status().isOk())
@@ -76,7 +80,8 @@ class TicketControllerTest {
         mockMvc.perform(post("/api/tickets")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("티켓 제목을 입력해 주세요."));
 
         mockMvc.perform(get("/api/tickets"))
             .andExpect(status().isOk())
@@ -119,7 +124,10 @@ class TicketControllerTest {
     @Test
     void returnsNotFoundForMissingTicket() throws Exception {
         mockMvc.perform(patch("/api/tickets/999/complete"))
-            .andExpect(status().isNotFound());
+            .andExpect(status().isNotFound())
+            .andExpect(content().contentTypeCompatibleWith(
+            MediaType.APPLICATION_JSON
+            )).andExpect(jsonPath("$.message").value("티켓을 찾을 수 없습니다."));
 
         mockMvc.perform(get("/api/tickets"))
             .andExpect(status().isOk())

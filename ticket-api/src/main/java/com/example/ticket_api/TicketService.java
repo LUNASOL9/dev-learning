@@ -3,9 +3,8 @@ package com.example.ticket_api;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+
 
 @Service 
 public class TicketService {
@@ -23,10 +22,7 @@ private final List<Ticket> tickets = new ArrayList<>(List.of(
 
     public synchronized Ticket create(String title) {
         if (title == null || title.isBlank()) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "티켓 제목을 입력해 주세요."
-            );
+            throw new InvalidTicketTitleException();
         }
 
         Ticket ticket = new Ticket(
@@ -55,10 +51,7 @@ private final List<Ticket> tickets = new ArrayList<>(List.of(
             }
         }
 
-        throw new ResponseStatusException(
-            HttpStatus.NOT_FOUND,
-            "티켓을 찾을 수 없습니다."
-        );
+        throw new TicketNotFoundException();
     }
 
 }//class

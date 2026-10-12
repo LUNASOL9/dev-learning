@@ -48,12 +48,12 @@ public class TicketServiceTest {
     void rejectsBlankTitleWithoutAddingTicket() {
         TicketService service = new TicketService();
 
-        ResponseStatusException exception = assertThrows(
-            ResponseStatusException.class,
+        InvalidTicketTitleException exception = assertThrows(
+            InvalidTicketTitleException.class,
             () -> service.create("   ")
         );
 
-        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertEquals("티켓 제목을 입력해 주세요.", exception.getMessage());
         assertEquals(3, service.findAll().size());
     }
 
@@ -62,12 +62,12 @@ public class TicketServiceTest {
         TicketService service = new TicketService();
         var before = service.findAll();
 
-        ResponseStatusException exception = assertThrows(
-            ResponseStatusException.class,
+        TicketNotFoundException exception = assertThrows(
+            TicketNotFoundException.class,
             () -> service.complete(999L)
         );
 
-        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("티켓을 찾을 수 없습니다.", exception.getMessage());
         assertEquals(before, service.findAll());
     }
     
