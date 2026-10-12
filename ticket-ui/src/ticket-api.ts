@@ -18,6 +18,32 @@ function isTicket(value : unknown) : value is Ticket{
     );
 }
 
+async function readErrorMessage(
+  response: Response,
+  fallbackMessage: string
+): Promise<string> {
+
+  try {
+    const data: unknown = await response.json();
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "message" in data &&
+      typeof data.message === "string" &&
+      data.message.trim().length > 0
+    ) {
+      return data.message.trim();
+    }
+  } catch {
+    // 빈 응답이나 HTML처럼 JSON으로 읽을 수 없는 경우
+    return fallbackMessage;
+  }
+    // JSON이지만 message가 없거나 올바른 문자열이 아닌 경우
+    return fallbackMessage;
+
+}
+
 
 export async function fetchTickets(
     signal?: AbortSignal
@@ -29,7 +55,9 @@ export async function fetchTickets(
     );
 
     if(!response.ok){
-        throw new Error(`HTTP 요청 실패: ${response.status}`);
+        //throw new Error(`HTTP 요청 실패: ${response.status}`);
+        const message = await readErrorMessage(response,`티켓 조회 실패: ${response.status}`);
+        throw new Error(message);
     }
 
     const data : unknown = await response.json();
@@ -60,7 +88,8 @@ export async function createTicket(title:string): Promise<Ticket>{
     });
 
     if(!response.ok){
-        throw new Error(`티켓 등록 실패: ${response.status}`);
+      const message = await readErrorMessage(response, `티켓 등록 실패:${response.status}`);
+      throw new Error(message);
     }
 
     const data :unknown = await response.json();
@@ -82,7 +111,10 @@ export async function completeTicket(ticketId:number) :Promise<Ticket> {
     );
 
     if(!response.ok){
-        throw new Error(`티켓 완료 처리 실패: ${response.status}`)
+        //throw new Error(`티켓 완료 처리 실패: ${response.status}`)
+
+        const message = await readErrorMessage(response,`티켓 완료 처리 실패 ${response.status}`);
+        throw new Error(message);
     }
 
     const data:unknown = await response.json();
