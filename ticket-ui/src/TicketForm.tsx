@@ -26,6 +26,12 @@ export default function TicketForm ({
             return;
         }
 
+        if (title.length > 50) {
+            setFormError("티켓 제목은 50자 이하여야 합니다.");
+            return;
+        }
+
+
         setFormError("");
 
         try{
