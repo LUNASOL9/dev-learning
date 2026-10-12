@@ -25,9 +25,15 @@ private final List<Ticket> tickets = new ArrayList<>(List.of(
             throw new InvalidTicketTitleException();
         }
 
+        String normalizedTitle = title.strip();
+
+        if (normalizedTitle.length() > 50) {
+            throw new InvalidTicketTitleException("티켓 제목은 50자 이하여야 합니다.");
+        }
+
         Ticket ticket = new Ticket(
             nextId++,
-            title.strip(),
+            normalizedTitle,
             "OPEN"
         );
 

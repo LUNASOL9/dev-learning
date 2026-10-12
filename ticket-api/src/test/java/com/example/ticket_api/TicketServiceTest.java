@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 public class TicketServiceTest {
 
@@ -70,5 +68,46 @@ public class TicketServiceTest {
         assertEquals("티켓을 찾을 수 없습니다.", exception.getMessage());
         assertEquals(before, service.findAll());
     }
-    
+
+    @Test
+    void acceptsTitleWith50Characters(){
+        TicketService service = new TicketService();
+        String title = "가".repeat(50);
+
+        Ticket created = service.create(title);
+
+        assertEquals(title, created.title());
+        assertTrue(service.findAll().contains(created));
+    }
+
+    @Test
+    void rejectsTitleWith51Characters() {
+        TicketService service = new TicketService();
+        String title = "가".repeat(51);
+
+        InvalidTicketTitleException exception = assertThrows(
+            InvalidTicketTitleException.class,
+            () -> service.create(title)
+        );
+
+        assertEquals(
+            "티켓 제목은 50자 이하여야 합니다.",
+            exception.getMessage()
+        );
+        assertEquals(3, service.findAll().size());
+    }
+
+    @Test
+    void acceptsTitleWith50CharactersAfterStripping(){
+        TicketService service = new TicketService();
+
+        String expectedTitle = "가".repeat(50);
+        String inputTitle = "  " + expectedTitle + "  ";
+
+        Ticket created = service.create(inputTitle);
+
+        assertEquals(expectedTitle, created.title());
+        assertTrue(service.findAll().contains(created));
+    }
+
 }

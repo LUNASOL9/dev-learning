@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.annotation.DirtiesContext;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -134,6 +135,29 @@ class TicketControllerTest {
             .andExpect(jsonPath("$.length()").value(3))
             .andExpect(jsonPath("$[0].status").value("OPEN"))
             .andExpect(jsonPath("$[2].status").value("OPEN"));
+    }
+
+    @Test
+    void rejectsTitleLongerThan50Characters() throws Exception {
+
+        String title = "가".repeat(51);
+        String requestBody = """
+                            {"title": "%s"}
+                            """.formatted(title);
+
+        mockMvc.perform(post("/api/tickets")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(requestBody))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(
+            MediaType.APPLICATION_JSON
+        ))
+        .andExpect(jsonPath("$.message")
+        .value("티켓 제목은 50자 이하여야 합니다."));
+
+        mockMvc.perform(get("/api/tickets"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3));
     }
 
 
