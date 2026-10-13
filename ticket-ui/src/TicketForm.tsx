@@ -13,6 +13,8 @@ export default function TicketForm ({
   
     const [newTitle, setNewTitle] = useState("");
     const [formError, setFormError] = useState("");
+    const titleLength = newTitle.trim().length;
+    const isTitleTooLong = titleLength > 50;
 
     async function handleSubmit(){
         if(disabled){
@@ -59,7 +61,7 @@ export default function TicketForm ({
                 onChange={event => setNewTitle(event.target.value)}
                 disabled={disabled}
             />
-            
+            <p style={{color : isTitleTooLong ? "red" : undefined}}>{titleLength}/50</p>
             <button type="submit" disabled={disabled}>
                 티켓 등록
             </button>
