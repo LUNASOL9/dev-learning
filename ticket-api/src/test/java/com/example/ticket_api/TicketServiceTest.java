@@ -40,7 +40,7 @@ public class TicketServiceTest {
 
         assertEquals(completed, service.findAll().get(0));
         assertEquals("OPEN", service.findAll().get(2).status());
-    } 
+    }
 
     @Test
     void rejectsBlankTitleWithoutAddingTicket() {
@@ -70,7 +70,7 @@ public class TicketServiceTest {
     }
 
     @Test
-    void acceptsTitleWith50Characters(){
+    void acceptsTitleWith50Characters() {
         TicketService service = new TicketService();
         String title = "가".repeat(50);
 
@@ -98,7 +98,7 @@ public class TicketServiceTest {
     }
 
     @Test
-    void acceptsTitleWith50CharactersAfterStripping(){
+    void acceptsTitleWith50CharactersAfterStripping() {
         TicketService service = new TicketService();
 
         String expectedTitle = "가".repeat(50);
@@ -110,4 +110,39 @@ public class TicketServiceTest {
         assertTrue(service.findAll().contains(created));
     }
 
+    @Test
+    void reopensClosedTicket() {
+        TicketService service = new TicketService();
+        Ticket reopenTicket = service.reopen(2L);
+        assertEquals(2L, reopenTicket.id());
+        assertEquals("결제 내역 확인", reopenTicket.title());
+        assertEquals("OPEN", reopenTicket.status());
+        assertEquals(3, service.findAll().size());
+        assertEquals(reopenTicket, service.findAll().get(1));
+    }
+
+    @Test
+    void rejectsReopeningMissingTicket() {
+        TicketService service = new TicketService();
+        var before = service.findAll();
+
+        TicketNotFoundException exception = assertThrows(
+            TicketNotFoundException.class,
+            () -> service.reopen(999L)
+        );
+
+        assertEquals("티켓을 찾을 수 없습니다.", exception.getMessage());
+        assertEquals(before, service.findAll());
+    }
+
+    @Test
+    void reopeningOpenTicketKeepsItOpen() {
+        TicketService service = new TicketService();
+        var before = service.findAll();
+        Ticket reopenTicket = service.reopen(1L);
+
+        assertEquals(1L, reopenTicket.id());
+        assertEquals("OPEN", reopenTicket.status());
+        assertEquals(before, service.findAll());
+    }
 }

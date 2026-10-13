@@ -37,4 +37,11 @@ public class TicketController {
     public Ticket complete(@PathVariable("ticketId") long ticketId) {
         return ticketService.complete(ticketId);
     }
+
+    @PatchMapping("/{ticketId}/reopen")
+    public Ticket reopen(@PathVariable("ticketId") long ticketId){
+        return ticketService.reopen(ticketId);
+    }
+
+
 }//class

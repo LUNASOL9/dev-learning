@@ -60,4 +60,25 @@ private final List<Ticket> tickets = new ArrayList<>(List.of(
         throw new TicketNotFoundException();
     }
 
+    public synchronized Ticket reopen(long ticketId) {    // 지정한 티켓을 OPEN으로 변경하고 반환
+
+        for(int i = 0; i < tickets.size(); i++){
+            Ticket ticket = tickets.get(i);
+
+            if(ticketId == ticket.id()){
+                Ticket reopenedTicket = new Ticket(
+                    ticket.id(),
+                    ticket.title(),
+                    "OPEN"
+                );
+
+                tickets.set(i, reopenedTicket);
+                return reopenedTicket;
+            }//if
+
+        }//for
+
+        throw new TicketNotFoundException();
+    }
+
 }//class
