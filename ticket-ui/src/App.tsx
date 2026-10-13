@@ -4,7 +4,7 @@ import type {Ticket} from "../../tickets";
 import { filterTickets } from "../../tickets";
 import TicketItem   from "./TicketItem";
 import TicketForm from "./TicketForm";
-import { fetchTickets, createTicket, completeTicket } from "./ticket-api";
+import { fetchTickets, createTicket, completeTicket, reopenTicket } from "./ticket-api";
 
 import {Routes, Route, Link} from "react-router";
 import TicketDetail from "./TicketDetail";
@@ -24,6 +24,10 @@ function App(){
   const [completingId, setCompletingId] = useState<number | null>(null);
   const [completeError, setCompleteError] = useState("");
 
+  const [reopeningId, setReopeningId] = useState<number | null>(null);
+  const [reopenError, setReopenError] = useState("");
+
+
   const[isSaving, setIsSaving] = useState(false);
   const [formKey, setFormKey] = useState(0); // 티켓 등록
 
@@ -34,7 +38,7 @@ function App(){
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const isBusy = isLoading || isSaving || completingId != null;//조회·등록·완료 요청 중 하나라도 진행 중인지
+  const isBusy = isLoading || isSaving || completingId != null || reopeningId != null;//조회·등록·완료 요청 중 하나라도 진행 중인지
   const filteredTickets = filterTickets(tickets, searchText, showCompleted);
 
   useEffect(()=>{
@@ -117,6 +121,7 @@ function App(){
     setIsLoading(true);
     setErrorMessage("");
     setCompleteError("");
+    setReopenError("");
 
     try{
       const loadedTickets = await fetchTickets();
@@ -138,7 +143,8 @@ function handleReset(){ //초기 상태로 복원
     setSearchText("");
     setShowCompleted(false);
     setCompleteError("");
-   
+    setReopenError("");
+
     setFormKey(previousKey => previousKey + 1);
 }
   
@@ -170,8 +176,6 @@ async function handleComplete(ticketId:number) :Promise<void>{ // 처리 완료
     }finally{
       setCompletingId(null);
     }
-
-
   /*
   setTickets(previousTickets =>
     
@@ -182,6 +186,38 @@ async function handleComplete(ticketId:number) :Promise<void>{ // 처리 완료
   );
   */
 }// handleComplete
+
+async function handleReopen(ticketId : number) {// 다시 열기 처리
+
+  if(isBusy){
+    return;
+  }
+
+  setReopeningId(ticketId);
+  setCompleteError("");
+  setReopenError("");
+
+  try{
+  const reopenedTicket = await reopenTicket(ticketId);
+
+  setTickets(previousTickets => previousTickets.map(ticket => 
+              ticket.id === ticketId ? reopenedTicket : ticket 
+            ))
+
+  } catch (error : unknown) {
+    
+      if(error instanceof Error ){
+        setReopenError(error.message);
+      }else{
+        setReopenError("티켓 다시 열기 처리 중 오류가 발생했습니다.");
+      }     
+    
+  } finally {
+    setReopeningId(null);
+  }
+
+}// handleReopen
+
 
 
   return (
@@ -205,6 +241,7 @@ async function handleComplete(ticketId:number) :Promise<void>{ // 처리 완료
 
             {errorMessage && <p role="alert">{errorMessage}</p>}
             {completeError && <p role="alert">{completeError}</p>}
+            {reopenError && <p role="alert">{reopenError}</p>}
 
             <button type="button" onClick={handleReset} disabled={isBusy}>
               입력 및 검색 초기화
@@ -229,7 +266,7 @@ async function handleComplete(ticketId:number) :Promise<void>{ // 처리 완료
           
               { isLoading ? (
                 <p role="status">티켓을 불러오는 중입니다.</p>              
-              ): filteredTickets.length === 0 ? (              
+              ) : filteredTickets.length === 0 ? (              
                 <p> 검색 조건에 맞는 티켓이 없습니다.</p>              
               ) : (
                 <ul>
@@ -239,6 +276,8 @@ async function handleComplete(ticketId:number) :Promise<void>{ // 처리 완료
                                 onComplete={handleComplete}
                                 disabled={isBusy}
                                 isCompleting={completingId === ticket.id}
+                                onReopen={handleReopen}
+                                isReopening={reopeningId === ticket.id}
                     />
                   ))}
                 </ul>              

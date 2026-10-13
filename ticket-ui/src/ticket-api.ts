@@ -124,4 +124,29 @@ export async function completeTicket(ticketId:number) :Promise<Ticket> {
     }
 
     return data;
-}//function
+}//function end 
+
+
+export async function reopenTicket(ticketId : number) : Promise<Ticket>{
+
+    const response = await fetch(
+        `/api/tickets/${ticketId}/reopen`,
+        {
+            method: "PATCH"
+        }
+    );
+
+    if(!response.ok){
+        const message = await readErrorMessage(response,`티켓 다시 열기 실패 ${response.status}`);
+        throw new Error(message);
+    }
+
+    const data:unknown = await response.json();
+
+    if(!isTicket(data)){
+        throw new Error("다시 열기 응답의 티켓 형식이 올바르지 않습니다.")
+    }
+
+    return data;
+
+}//function end 
