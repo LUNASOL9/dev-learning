@@ -42,41 +42,29 @@ private final List<Ticket> tickets = new ArrayList<>(List.of(
     }
 
     public synchronized Ticket complete(long ticketId) {
+        return changeStatus(ticketId, "CLOSED");
+    }
+
+    public synchronized Ticket reopen(long ticketId) {    // 지정한 티켓을 OPEN으로 변경하고 반환
+        return changeStatus(ticketId, "OPEN");
+    }
+
+    private Ticket changeStatus(long ticketId, String status) {
+
         for (int i = 0; i < tickets.size(); i++) {
             Ticket ticket = tickets.get(i);
 
             if (ticket.id() == ticketId) {
-                Ticket completedTicket = new Ticket(
+                Ticket updatedTicket = new Ticket(
                     ticket.id(),
                     ticket.title(),
-                    "CLOSED"
+                    status
                 );
 
-                tickets.set(i, completedTicket);
-                return completedTicket;
+                tickets.set(i, updatedTicket);
+                return updatedTicket;
             }
         }
-
-        throw new TicketNotFoundException();
-    }
-
-    public synchronized Ticket reopen(long ticketId) {    // 지정한 티켓을 OPEN으로 변경하고 반환
-
-        for(int i = 0; i < tickets.size(); i++){
-            Ticket ticket = tickets.get(i);
-
-            if(ticketId == ticket.id()){
-                Ticket reopenedTicket = new Ticket(
-                    ticket.id(),
-                    ticket.title(),
-                    "OPEN"
-                );
-
-                tickets.set(i, reopenedTicket);
-                return reopenedTicket;
-            }//if
-
-        }//for
 
         throw new TicketNotFoundException();
     }
