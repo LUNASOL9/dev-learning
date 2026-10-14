@@ -102,51 +102,48 @@ export async function createTicket(title:string): Promise<Ticket>{
 }//function
 
 export async function completeTicket(ticketId:number) :Promise<Ticket> {
-
-    const response = await fetch(
+    return requestTicketStatusChange(
         `/api/tickets/${ticketId}/complete`,
-        {
-            method: "PATCH",
-        }
+        `티켓 완료 처리 실패`,
+        `완료 응답의 티켓 형식이 올바르지 않습니다.`
     );
-
-    if(!response.ok){
-        //throw new Error(`티켓 완료 처리 실패: ${response.status}`)
-
-        const message = await readErrorMessage(response,`티켓 완료 처리 실패 ${response.status}`);
-        throw new Error(message);
-    }
-
-    const data:unknown = await response.json();
-
-    if(!isTicket(data)){
-        throw new Error("완료 응답의 티켓 형식이 올바르지 않습니다.");
-    }
-
-    return data;
-}//function end 
+}//function end
 
 
 export async function reopenTicket(ticketId : number) : Promise<Ticket>{
+    return requestTicketStatusChange(
+        `/api/tickets/${ticketId}/reopen`,
+        `티켓 다시 열기 실패`,
+        `다시 열기 응답의 티켓 형식이 올바르지 않습니다.`
+    );
+}//function end 
+
+
+async function requestTicketStatusChange(
+    url : string,
+    failureMessage: string,
+    invalidResponseMessage: string): Promise<Ticket> {
 
     const response = await fetch(
-        `/api/tickets/${ticketId}/reopen`,
+        url,
         {
             method: "PATCH"
         }
     );
 
     if(!response.ok){
-        const message = await readErrorMessage(response,`티켓 다시 열기 실패 ${response.status}`);
+        const message = await readErrorMessage(
+            response,
+            `${failureMessage}: ${response.status}`
+        );
         throw new Error(message);
     }
 
-    const data:unknown = await response.json();
+    const data : unknown = await response.json();
 
     if(!isTicket(data)){
-        throw new Error("다시 열기 응답의 티켓 형식이 올바르지 않습니다.")
+        throw new Error(invalidResponseMessage);
     }
 
     return data;
-
-}//function end 
+}
