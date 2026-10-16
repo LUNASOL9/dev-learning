@@ -15,7 +15,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 @WebMvcTest(TicketController.class)
-@Import(TicketService.class)
+@Import({
+    TicketService.class,
+    TicketRepository.class
+    })
 @DirtiesContext(
     classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD
 )
