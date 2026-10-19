@@ -3,7 +3,7 @@ package com.example.ticket_api;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 
 @Service 
 public class TicketService {
@@ -20,6 +20,7 @@ public class TicketService {
         return ticketRepository.findAll();
     }
 
+    @Transactional
     public synchronized Ticket create(String title) {
 
         if (title == null || title.isBlank()) {
@@ -35,10 +36,12 @@ public class TicketService {
         return ticketRepository.insert(normalizedTitle, "OPEN");
     }
 
+    @Transactional
     public synchronized Ticket complete(long ticketId) {
         return changeStatus(ticketId, "CLOSED");
     }
 
+    @Transactional
     public synchronized Ticket reopen(long ticketId) {    // 지정한 티켓을 OPEN으로 변경하고 반환
         return changeStatus(ticketId, "OPEN");
     }
