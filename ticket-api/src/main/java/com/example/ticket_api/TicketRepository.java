@@ -1,64 +1,102 @@
 package com.example.ticket_api;
 
-import java.util.ArrayList;
+import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
-@Repository 
+@Repository
 public class TicketRepository {
-    private final List<Ticket> tickets = new ArrayList<>(List.of(
-        new Ticket(1L, "로그인 오류", "OPEN"),
-        new Ticket(2L, "결제 내역 확인", "CLOSED"),
-        new Ticket(3L, "화면 속도 저하", "OPEN")
-    ));
 
-    private long nextId = 4L;
-
-    public synchronized List<Ticket> findAll() {
-        return List.copyOf(tickets);
-    }
-
-    //Optional<Ticket>은 티켓이 있을 수도, 없을 수도 있다는 것을 표현하는 반환 타입
-    public synchronized Optional<Ticket> findById(long ticketId) {
-
-        for (int i = 0; i < tickets.size(); i++) {
-            Ticket ticket = tickets.get(i);
-
-            if (ticket.id() == ticketId) { 
-                //찾았을 때:               
-                return Optional.of(ticket);
-            }
-        }
-        //찾지 못했을 때:
-        return Optional.empty(); 
-    }
-
-
-    public synchronized Ticket insert(String title, String status) {
-        
-        Ticket newTicket = new Ticket(
-            nextId++,
-            title,
-            status
+    private static final RowMapper<Ticket> TICKET_ROW_MAPPER =
+        (rs, rowNum) -> new Ticket(
+            rs.getLong("id"),
+            rs.getString("title"),
+            rs.getString("status")
         );
 
-        tickets.add(newTicket);
-        return newTicket;
+    private final JdbcTemplate jdbcTemplate;
+
+    public TicketRepository(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
-    public synchronized boolean update(Ticket updatedTicket) {
+    public List<Ticket> findAll() {
+        String sql = """
+            SELECT id, title, status
+            FROM tickets
+            ORDER BY id
+            """;
 
-        for(int index=0;  index < tickets.size();  index++){
+        return jdbcTemplate.query(sql, TICKET_ROW_MAPPER);
+    }
 
-            if(tickets.get(index).id() == updatedTicket.id()){
-                tickets.set(index, updatedTicket);
-                return true;
-            }
+    public Optional<Ticket> findById(long ticketId) {
+        String sql = """
+            SELECT id, title, status
+            FROM tickets
+            WHERE id = ?
+            """;
+
+        List<Ticket> results = jdbcTemplate.query(
+            sql,
+            TICKET_ROW_MAPPER,
+            ticketId
+        );
+
+        return results.stream().findFirst();
+    }
+
+    public Ticket insert(String title, String status) {
+        String sql = """
+            INSERT INTO tickets (title, status)
+            VALUES (?, ?)
+            """;
+
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        jdbcTemplate.update(connection -> {
+            PreparedStatement statement = connection.prepareStatement(
+                sql,
+                new String[] {"id"}
+            );
+
+            statement.setString(1, title);
+            statement.setString(2, status);
+
+            return statement;
+        }, keyHolder);
+
+        Number generatedId = keyHolder.getKey();
+
+        if (generatedId == null) {
+            throw new IllegalStateException(
+                "생성된 티켓 ID를 가져오지 못했습니다."
+            );
         }
 
-        return false;
+        return new Ticket(generatedId.longValue(), title, status);
     }
 
-}//class
+    public boolean update(Ticket updatedTicket) {
+        String sql = """
+            UPDATE tickets
+            SET title = ?, status = ?
+            WHERE id = ?
+            """;
+
+        int updatedRows = jdbcTemplate.update(
+            sql,
+            updatedTicket.title(),
+            updatedTicket.status(),
+            updatedTicket.id()
+        );
+
+        return updatedRows == 1;
+    }
+}

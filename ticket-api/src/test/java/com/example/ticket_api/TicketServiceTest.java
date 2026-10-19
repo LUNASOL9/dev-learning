@@ -6,12 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-public class TicketServiceTest {
+public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void createsTicketWithTrimmedTitle() {
         // 준비
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
 
         // 실행
         Ticket created = service.create("  프린터 연결 오류  ");
@@ -28,7 +28,7 @@ public class TicketServiceTest {
     @Test
     void completesTicket() {
         // 준비
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
 
         // 실행
         Ticket completed = service.complete(1L);
@@ -44,7 +44,7 @@ public class TicketServiceTest {
 
     @Test
     void rejectsBlankTitleWithoutAddingTicket() {
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
 
         InvalidTicketTitleException exception = assertThrows(
             InvalidTicketTitleException.class,
@@ -57,7 +57,7 @@ public class TicketServiceTest {
 
     @Test
     void rejectsMissingTicketWithoutChangingList() {
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
         var before = service.findAll();
 
         TicketNotFoundException exception = assertThrows(
@@ -71,7 +71,7 @@ public class TicketServiceTest {
 
     @Test
     void acceptsTitleWith50Characters() {
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
         String title = "가".repeat(50);
 
         Ticket created = service.create(title);
@@ -82,7 +82,7 @@ public class TicketServiceTest {
 
     @Test
     void rejectsTitleWith51Characters() {
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
         String title = "가".repeat(51);
 
         InvalidTicketTitleException exception = assertThrows(
@@ -99,7 +99,7 @@ public class TicketServiceTest {
 
     @Test
     void acceptsTitleWith50CharactersAfterStripping() {
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
 
         String expectedTitle = "가".repeat(50);
         String inputTitle = "  " + expectedTitle + "  ";
@@ -112,7 +112,7 @@ public class TicketServiceTest {
 
     @Test
     void reopensClosedTicket() {
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
         Ticket reopenTicket = service.reopen(2L);
         assertEquals(2L, reopenTicket.id());
         assertEquals("결제 내역 확인", reopenTicket.title());
@@ -123,7 +123,7 @@ public class TicketServiceTest {
 
     @Test
     void rejectsReopeningMissingTicket() {
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
         var before = service.findAll();
 
         TicketNotFoundException exception = assertThrows(
@@ -137,7 +137,7 @@ public class TicketServiceTest {
 
     @Test
     void reopeningOpenTicketKeepsItOpen() {
-        TicketService service = new TicketService(new TicketRepository());
+        TicketService service = new TicketService(repository);
         var before = service.findAll();
         Ticket reopenTicket = service.reopen(1L);
 

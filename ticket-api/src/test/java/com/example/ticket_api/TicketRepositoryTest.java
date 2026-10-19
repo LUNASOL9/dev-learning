@@ -6,11 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-public class TicketRepositoryTest {
+public class TicketRepositoryTest extends DatabaseTestSupport{
     
     @Test
     void findsExistingTicketById() {
-        TicketRepository repository = new TicketRepository();
+        //TicketRepository repository = new TicketRepository();
         // 1. ID가 2L인 티켓 조회
         var result = repository.findById(2L);
         
@@ -24,7 +24,7 @@ public class TicketRepositoryTest {
 
     @Test 
     void returnsEmptyWhenTicketDoesNotExist() {
-        TicketRepository repository = new TicketRepository();
+        //TicketRepository repository = new TicketRepository();
         var result = repository.findById(999L);
         
         // 결과가 비어 있는지 검증
@@ -33,7 +33,7 @@ public class TicketRepositoryTest {
 
     @Test 
     void insertsTicketAndFindsItById() {
-        TicketRepository repository = new TicketRepository();
+        //TicketRepository repository = new TicketRepository();
 
         Ticket created = repository.insert("프린터 연결 오류", "OPEN");
         assertEquals(4L, created.id());
@@ -48,7 +48,7 @@ public class TicketRepositoryTest {
 
     @Test
     void assignsSequentialIdsToNewTickets() {
-        TicketRepository repository = new TicketRepository();
+        //TicketRepository repository = new TicketRepository();
 
         Ticket first = repository.insert("첫 번째 티켓", "OPEN");
         Ticket second = repository.insert("두 번째 티켓", "OPEN");
@@ -61,7 +61,7 @@ public class TicketRepositoryTest {
 
     @Test 
     void updatesExistingTicket() {
-        TicketRepository repository = new TicketRepository();
+        //TicketRepository repository = new TicketRepository();
         Ticket testTicket = new Ticket(2L, "결제 내역 확인", "OPEN");
 
         assertTrue(repository.update(testTicket));
@@ -73,7 +73,7 @@ public class TicketRepositoryTest {
 
     @Test
     void returnsFalseWhenUpdatingMissingTicket() {
-        TicketRepository repository = new TicketRepository();
+        //TicketRepository repository = new TicketRepository();
 
         // 1. 수정 전 전체 목록을 before 변수에 보관
         var before =repository.findAll();

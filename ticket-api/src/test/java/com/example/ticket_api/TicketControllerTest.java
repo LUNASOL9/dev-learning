@@ -17,9 +17,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @WebMvcTest(TicketController.class)
 @Import({
     TicketService.class,
-    TicketRepository.class
+    TicketRepository.class,
+    TestDatabaseConfig.class
     })
-@DirtiesContext(
+@DirtiesContext(    //테스트 메서드가 끝날 때 다음 테스트를 위해 컨텍스트를 완전히 초기화
     classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD
 )
 class TicketControllerTest {
