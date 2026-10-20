@@ -4,14 +4,46 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+//Spring이 JPA 환경 준비
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
+
 import org.junit.jupiter.api.Test;
 
-public class TicketServiceTest extends DatabaseTestSupport {
+/*JPA hibernate----- */
+@DataJpaTest(properties = {//엔티티·JPA Repository·테스트 트랜잭션 준비
+    "spring.jpa.hibernate.ddl-auto=none",
+    "spring.sql.init.mode=always",
+    "spring.sql.init.data-locations=classpath:test-data.sql",
+    "spring.sql.init.encoding=UTF-8"
+})
+
+@AutoConfigureTestDatabase(//실제 파일 DB 대신 테스트용 메모리 H2 DB 사용
+    replace = AutoConfigureTestDatabase.Replace.ANY
+)
+
+@Import(TicketService.class)//Service도 테스트 환경에 등록
+
+@DirtiesContext(//테스트마다 Spring 환경을 다시 만들어 초기 상태로 시작
+    classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD
+)
+/*-----JPA hibernate */
+
+
+
+
+public class TicketServiceTest /* JDBC -> JPA hibernate 주석 
+                                extends DatabaseTestSupport*/ {
+    @Autowired
+    private TicketService service;
 
     @Test
     void createsTicketWithTrimmedTitle() {
         // 준비
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
 
         // 실행
         Ticket created = service.create("  프린터 연결 오류  ");
@@ -28,7 +60,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
     @Test
     void completesTicket() {
         // 준비
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
 
         // 실행
         Ticket completed = service.complete(1L);
@@ -44,7 +76,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void rejectsBlankTitleWithoutAddingTicket() {
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
 
         InvalidTicketTitleException exception = assertThrows(
             InvalidTicketTitleException.class,
@@ -57,7 +89,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void rejectsMissingTicketWithoutChangingList() {
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
         var before = service.findAll();
 
         TicketNotFoundException exception = assertThrows(
@@ -71,7 +103,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void acceptsTitleWith50Characters() {
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
         String title = "가".repeat(50);
 
         Ticket created = service.create(title);
@@ -82,7 +114,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void rejectsTitleWith51Characters() {
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
         String title = "가".repeat(51);
 
         InvalidTicketTitleException exception = assertThrows(
@@ -99,7 +131,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void acceptsTitleWith50CharactersAfterStripping() {
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
 
         String expectedTitle = "가".repeat(50);
         String inputTitle = "  " + expectedTitle + "  ";
@@ -112,7 +144,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void reopensClosedTicket() {
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
         Ticket reopenTicket = service.reopen(2L);
         assertEquals(2L, reopenTicket.id());
         assertEquals("결제 내역 확인", reopenTicket.title());
@@ -123,7 +155,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void rejectsReopeningMissingTicket() {
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
         var before = service.findAll();
 
         TicketNotFoundException exception = assertThrows(
@@ -137,7 +169,7 @@ public class TicketServiceTest extends DatabaseTestSupport {
 
     @Test
     void reopeningOpenTicketKeepsItOpen() {
-        TicketService service = new TicketService(repository);
+        //TicketService service = new TicketService(repository);
         var before = service.findAll();
         Ticket reopenTicket = service.reopen(1L);
 

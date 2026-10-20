@@ -13,13 +13,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-
+/* JDBC -> JPA hibernate 주석
 @WebMvcTest(TicketController.class)
 @Import({
     TicketService.class,
     TicketRepository.class,
     TestDatabaseConfig.class
     })
+*/
+
+/*JPA hibernate----- */
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+
+
+@SpringBootTest(properties = {
+    "spring.jpa.hibernate.ddl-auto=none",
+    "spring.sql.init.mode=always",
+    "spring.sql.init.data-locations=classpath:test-data.sql",
+    "spring.sql.init.encoding=UTF-8"
+})
+@AutoConfigureMockMvc
+@AutoConfigureTestDatabase(//   실제 파일 DB 대신 테스트용 메모리 H2 DB 사용
+    replace = AutoConfigureTestDatabase.Replace.ANY
+)
+/*-----JPA hibernate */
+
 @DirtiesContext(    //테스트 메서드가 끝날 때 다음 테스트를 위해 컨텍스트를 완전히 초기화
     classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD
 )
