@@ -17,6 +17,11 @@ public class TicketEntity {
     @Column(nullable = false, length = 10)
     private String status;
 
+    //“내가 조회한 이후 다른 요청이 먼저 수정했는지”를 확인하는 방법 낙관적 잠금
+    @Version
+    @Column(nullable = false)
+    private Long version;//Hibernate가 저장·수정 과정에서 관리.
+
     protected TicketEntity() {} 
     public TicketEntity(String title, String status) {
         this.title = title; 
@@ -25,7 +30,9 @@ public class TicketEntity {
 
 
 
-
+    public Long getVersion() {
+        return version;
+    }
     public Long getId(){
         return id;
     }
