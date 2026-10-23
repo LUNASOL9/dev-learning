@@ -11,8 +11,8 @@ function featchTickets(shouldFail = false): Promise<Ticket[]> {
             }
 
             resolve([
-                {id: 1, title: "로그인 오류", status:"OPEN"},
-                {id: 2, title: "결제 내역 확인", status:"CLOSED"}
+                {id: 1, title: "로그인 오류", status:"OPEN", version:0},
+                {id: 2, title: "결제 내역 확인", status:"CLOSED", version:0}
             ]);
 
         },1000); //setTimeout

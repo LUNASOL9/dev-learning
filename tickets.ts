@@ -2,7 +2,8 @@
 export type Ticket ={
     id: number;
     title: string;
-    status: "OPEN" | "CLOSED";
+    status: "OPEN" | "CLOSED"
+    version:number;
 }
 
 export function filterTickets(

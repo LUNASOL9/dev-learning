@@ -5,10 +5,10 @@ import type { Ticket } from "./tickets";
 
 
 const tickets: Ticket[] = [
-    {id: 1, title: "로그인 오류", status: "OPEN"},
-    {id: 2, title: "결제 내역 확인", status: "CLOSED"},
-    {id: 3, title: "화면 속도 저하", status: "OPEN"},
-    {id: 4, title: "로그인 오류 해결 완료", status: "CLOSED"},
+    {id: 1, title: "로그인 오류", status: "OPEN", version: 0},
+    {id: 2, title: "결제 내역 확인", status: "CLOSED", version: 0},
+    {id: 3, title: "화면 속도 저하", status: "OPEN", version: 0},
+    {id: 4, title: "로그인 오류 해결 완료", status: "CLOSED", version: 0},
 ];
 
 

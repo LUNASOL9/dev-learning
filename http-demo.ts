@@ -58,6 +58,7 @@ async function main() : Promise<void> {
         id: data.id,
         title: data.title,
         status: data.completed ? "CLOSED" : "OPEN",
+        version:0
     }
 
     const openTickets = findOpenTickets([ticket] ,"");
