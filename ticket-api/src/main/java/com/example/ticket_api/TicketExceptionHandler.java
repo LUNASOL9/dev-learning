@@ -31,15 +31,28 @@ public class TicketExceptionHandler {
             .body(new ErrorResponse(exception.getMessage()));
     }
 
-    @ExceptionHandler(OptimisticLockingFailureException.class)
+    @ExceptionHandler({
+        OptimisticLockingFailureException.class,
+        TicketVersionConflictException.class
+    })
     public ResponseEntity<ErrorResponse> handleOptimisticLock(
-            OptimisticLockingFailureException exception
+            RuntimeException exception
     ) {
         return ResponseEntity
             .status(HttpStatus.CONFLICT)    //409
             .body(new ErrorResponse(
                 "다른 요청이 티켓을 변경했습니다. 목록을 새로 조회한 뒤 다시 시도해 주세요."
             ));
+    }
+
+    //티켓 버전 null 또는 음수 → 잘못된 요청 → 400
+    @ExceptionHandler(InvalidTicketVersionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidVersion(
+            InvalidTicketVersionException exception
+    ) {
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(new ErrorResponse(exception.getMessage()));
     }
 
 }

@@ -21,7 +21,9 @@ public class TicketService {
         return new Ticket(        
             entity.getId(),
             entity.getTitle(),
-            entity.getStatus()
+            entity.getStatus(),
+            entity.getVersion()
+
         );
     }
     
@@ -55,29 +57,43 @@ public class TicketService {
     }
 
     @Transactional
-    public Ticket complete(long ticketId) {
+    public Ticket complete(long ticketId, Long requestedVersion) {
         TicketEntity entity = ticketJpaRepository.findById(ticketId)
             .orElseThrow(() -> new TicketNotFoundException());
 
+        validateVersion(entity, requestedVersion);//버전 다르면 예외
+
         entity.complete();
+        ticketJpaRepository.flush();    // UPDATE와 버전 증가를 DB에 반영. 아직 커밋 전이므로 롤백 가능.
 
         return toTicket(entity);
     }
 
     @Transactional
-    public Ticket reopen(long ticketId) {
+    public Ticket reopen(long ticketId, Long requestedVersion) {
         TicketEntity entity = ticketJpaRepository.findById(ticketId)
             .orElseThrow(() -> new TicketNotFoundException());
 
+        validateVersion(entity, requestedVersion);//버전 다르면 예외
+
         entity.reopen();
+        ticketJpaRepository.flush();
 
         return toTicket(entity);
     }
-    
     // save()나 update()가 없다.
     // 트랜잭션 안에서 조회한 관리 상태의 TicketEntity entity 엔티티를 변경했으므로, 
     // 정상적인 트랜잭션 종료 과정에서 변경 감지로 UPDATE가 실행
 
+    private  void validateVersion(TicketEntity entity, Long requestedVersion ) {
+        if (requestedVersion == null || requestedVersion < 0) {
+            throw new InvalidTicketVersionException();
+        }
+
+        if (!entity.getVersion().equals(requestedVersion)) {
+            throw new TicketVersionConflictException();
+        }
+    }
 
 
     

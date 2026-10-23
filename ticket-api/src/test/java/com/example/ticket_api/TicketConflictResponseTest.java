@@ -36,14 +36,18 @@ class TicketConflictResponseTest {
         // 1. 가짜 Service의 동작 규칙을 미리 등록합니다.
         // complete(1L)이 호출되면 반환값 대신 충돌 예외를 던집니다.
         // 이 줄에서 실제 완료 처리나 DB 수정이 실행되지는 않습니다.
-        when(service.complete(1L))
+        when(service.complete(1L, 0L))
             .thenThrow(new OptimisticLockingFailureException(
                 "테스트용 충돌"
             ));
 
         // 2. 티켓 완료 API로 PATCH 요청을 보냅니다.
         // Controller → 가짜 Service → 예외 발생 → 예외 처리기 순으로 실행됩니다.
-        mockMvc.perform(patch("/api/tickets/1/complete"))
+        mockMvc.perform(patch("/api/tickets/1/complete")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                                {"version": 0}
+                            """))
 
             // 3. HTTP 상태 코드가 409 Conflict인지 검증합니다. 결과 검증
             .andExpect(status().isConflict())
@@ -64,13 +68,17 @@ class TicketConflictResponseTest {
     void returnsConflictWhenReopeningStaleTicket() throws Exception {
 
         //가짜 서비스에게 "이럴 때 에러를 뿜어라"고 미리 명령을 심어둡니다.
-        when(service.reopen(2L))
+        when(service.reopen(2L, 0L))
             .thenThrow(new OptimisticLockingFailureException(
                 "테스트용 충돌"
             ));
 
         //실제 서버 포트를 열지 않고 MockMvc로 PATCH 요청 처리를 실행합니다.
-        mockMvc.perform(patch("/api/tickets/2/reopen"))
+        mockMvc.perform(patch("/api/tickets/2/reopen")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                                {"version": 0}
+                            """))
             .andExpect(status().isConflict())
             .andExpect(content().contentTypeCompatibleWith(
                 MediaType.APPLICATION_JSON

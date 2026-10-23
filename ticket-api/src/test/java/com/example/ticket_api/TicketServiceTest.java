@@ -63,7 +63,7 @@ public class TicketServiceTest /* JDBC -> JPA hibernate 주석
         //TicketService service = new TicketService(repository);
 
         // 실행
-        Ticket completed = service.complete(1L);
+        Ticket completed = service.complete(1L, 0L);
 
         // 검증
         assertEquals(1L, completed.id());
@@ -94,7 +94,7 @@ public class TicketServiceTest /* JDBC -> JPA hibernate 주석
 
         TicketNotFoundException exception = assertThrows(
             TicketNotFoundException.class,
-            () -> service.complete(999L)
+            () -> service.complete(999L, 0L)
         );
 
         assertEquals("티켓을 찾을 수 없습니다.", exception.getMessage());
@@ -145,7 +145,7 @@ public class TicketServiceTest /* JDBC -> JPA hibernate 주석
     @Test
     void reopensClosedTicket() {
         //TicketService service = new TicketService(repository);
-        Ticket reopenTicket = service.reopen(2L);
+        Ticket reopenTicket = service.reopen(2L, 0L);
         assertEquals(2L, reopenTicket.id());
         assertEquals("결제 내역 확인", reopenTicket.title());
         assertEquals("OPEN", reopenTicket.status());
@@ -160,7 +160,7 @@ public class TicketServiceTest /* JDBC -> JPA hibernate 주석
 
         TicketNotFoundException exception = assertThrows(
             TicketNotFoundException.class,
-            () -> service.reopen(999L)
+            () -> service.reopen(999L, 0L)
         );
 
         assertEquals("티켓을 찾을 수 없습니다.", exception.getMessage());
@@ -171,10 +171,94 @@ public class TicketServiceTest /* JDBC -> JPA hibernate 주석
     void reopeningOpenTicketKeepsItOpen() {
         //TicketService service = new TicketService(repository);
         var before = service.findAll();
-        Ticket reopenTicket = service.reopen(1L);
+        Ticket reopenTicket = service.reopen(1L, 0L);
 
         assertEquals(1L, reopenTicket.id());
         assertEquals("OPEN", reopenTicket.status());
         assertEquals(before, service.findAll());
     }
-}
+
+    @Test
+    void rejectsReopeningWithStaleVersion() {
+        /*
+            화면이 기억하는 버전: 0
+                ↓ 다른 요청이 완료 처리
+            DB: CLOSED, version=1
+                ↓ 오래된 화면이 version=0으로 재오픈 요청
+            거절 → CLOSED, version=1 유지
+        */
+
+        // 초기 버전 0으로 완료 처리 → 버전 증가
+        Ticket completed = service.complete(1L, 0L);
+
+        assertEquals(Long.valueOf(1L), completed.version());
+
+        // 최신 상태를 저장해 둠
+        var before = service.findAll();
+
+        // 과거 화면에서 본 버전 0으로 재오픈 요청
+        assertThrows(
+            TicketVersionConflictException.class,
+            () -> service.reopen(1L, 0L)
+        );
+
+        // 거절된 요청이 티켓을 변경하지 않았는지 확인
+        assertEquals(before, service.findAll());
+    }
+
+    @Test
+    void rejectsCompletionWithStaleVersion() {
+        // 1. 초기 CLOSED 티켓 2L을 버전 0L로 재오픈
+        Ticket reopened = service.reopen(2L, 0L);
+
+        // 2. 반환된 버전이 1인지 확인
+        assertEquals(Long.valueOf(1L), reopened.version());
+
+        // 3. 변경 후 목록을 before에 보관
+        var before = service.findAll();
+
+        // 4. service.complete(2L, 0L)이 충돌 예외를 던지는지 확인
+        assertThrows(
+            TicketVersionConflictException.class,
+            () -> service.complete(2L, 0L)
+        );
+
+        // 5. 목록이 before와 같은지 확인
+        assertEquals(before, service.findAll());
+    }
+
+    @Test
+    void rejectsCompletionWithoutVersion() {
+        var before = service.findAll();
+
+        InvalidTicketVersionException exception = assertThrows(
+            InvalidTicketVersionException.class,
+            () -> service.complete(1L, null)    //버전이 누락된 요청
+        );
+
+        assertEquals(
+            "티켓 버전은 0 이상의 숫자로 입력해 주세요.",
+            exception.getMessage()
+        );
+
+        assertEquals(before, service.findAll());
+    }
+
+    @Test
+    void rejectsReopeningWithNegativeVersion() {
+        var before = service.findAll();
+
+        InvalidTicketVersionException exception = assertThrows(
+            InvalidTicketVersionException.class,
+            () -> service.reopen(2L, -1L)    //음수 버전을 보낸 요청
+        );
+
+        assertEquals(
+            "티켓 버전은 0 이상의 숫자로 입력해 주세요.",
+            exception.getMessage()
+        );
+
+        assertEquals(before, service.findAll());
+    }
+
+}//class

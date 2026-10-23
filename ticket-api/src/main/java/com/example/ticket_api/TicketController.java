@@ -34,13 +34,15 @@ public class TicketController {
     }
 
     @PatchMapping("/{ticketId}/complete")
-    public Ticket complete(@PathVariable("ticketId") long ticketId) {
-        return ticketService.complete(ticketId);
+    public Ticket complete(@PathVariable("ticketId") long ticketId,
+                           @RequestBody ChangeTicketStatusRequest request) {
+        return ticketService.complete(ticketId, request.version());
     }
 
     @PatchMapping("/{ticketId}/reopen")
-    public Ticket reopen(@PathVariable("ticketId") long ticketId){
-        return ticketService.reopen(ticketId);
+    public Ticket reopen(@PathVariable("ticketId") long ticketId,
+                         @RequestBody ChangeTicketStatusRequest request){
+        return ticketService.reopen(ticketId, request.version());
     }
 
 
