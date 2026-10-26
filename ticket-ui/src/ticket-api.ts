@@ -2,7 +2,6 @@ import type { Ticket } from "../../tickets";
 
 
 function isTicket(value : unknown) : value is Ticket{
-    
     return (
         typeof value === "object" &&
         value !== null &&
@@ -14,7 +13,12 @@ function isTicket(value : unknown) : value is Ticket{
         typeof value.title === "string" &&
         
         "status" in value &&
-        (value.status === "OPEN" || value.status === "CLOSED")
+        (value.status === "OPEN" || value.status === "CLOSED") &&
+
+        "version" in value &&
+        typeof value.version === "number" &&
+        Number.isSafeInteger(value.version) &&  //JavaScript에서 정확하게 표현할 수 있는 정수다.
+        value.version >= 0
     );
 }
 
@@ -101,18 +105,20 @@ export async function createTicket(title:string): Promise<Ticket>{
     return data;
 }//function
 
-export async function completeTicket(ticketId:number) :Promise<Ticket> {
+export async function completeTicket(ticketId:number, version:number) :Promise<Ticket> {
     return requestTicketStatusChange(
         `/api/tickets/${ticketId}/complete`,
+        version,
         `티켓 완료 처리 실패`,
         `완료 응답의 티켓 형식이 올바르지 않습니다.`
     );
 }//function end
 
 
-export async function reopenTicket(ticketId : number) : Promise<Ticket>{
+export async function reopenTicket(ticketId : number, version:number) : Promise<Ticket>{
     return requestTicketStatusChange(
         `/api/tickets/${ticketId}/reopen`,
+        version,
         `티켓 다시 열기 실패`,
         `다시 열기 응답의 티켓 형식이 올바르지 않습니다.`
     );
@@ -121,13 +127,18 @@ export async function reopenTicket(ticketId : number) : Promise<Ticket>{
 
 async function requestTicketStatusChange(
     url : string,
+    version : number,
     failureMessage: string,
     invalidResponseMessage: string): Promise<Ticket> {
 
     const response = await fetch(
         url,
         {
-            method: "PATCH"
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({version}),    //{ version }은 { version: version }의 축약 표현
         }
     );
 

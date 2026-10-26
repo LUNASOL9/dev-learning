@@ -18,7 +18,7 @@ export default function TicketItem({ticket, onComplete, onReopen , disabled,  is
     return (
         <li>
             <Link to={`/tickets/${ticket.id}`}>
-                {ticket.title}
+                {ticket.title} {ticket.version}
             </Link> 
             {" - "} 
             {statusLabel}

@@ -153,12 +153,17 @@ async function handleComplete(ticketId:number) :Promise<void>{ // 처리 완료
   if(isBusy){
     return;
   }
+    const targetTicket = tickets.find(ticket => ticket.id === ticketId);
+    if (!targetTicket) {
+      setCompleteError("화면에서 티켓을 찾을 수 없습니다. 목록을 다시 조회해 주세요.");
+      return;
+    }
 
     setCompletingId(ticketId);
     setCompleteError("");
 
     try{
-      const completedTicket = await completeTicket(ticketId);
+      const completedTicket = await completeTicket(ticketId, targetTicket.version);
 
       setTickets( previousTickets =>
         previousTickets.map(ticket =>
@@ -193,12 +198,18 @@ async function handleReopen(ticketId : number) {// 다시 열기 처리
     return;
   }
 
+  const targetTicket = tickets.find(ticket => ticket.id === ticketId);
+  if (!targetTicket) {
+    setCompleteError("화면에서 티켓을 찾을 수 없습니다. 목록을 다시 조회해 주세요.");
+    return;
+  }
+
   setReopeningId(ticketId);
   setCompleteError("");
   setReopenError("");
 
   try{
-  const reopenedTicket = await reopenTicket(ticketId);
+  const reopenedTicket = await reopenTicket(ticketId, targetTicket.version);
 
   setTickets(previousTickets => previousTickets.map(ticket => 
               ticket.id === ticketId ? reopenedTicket : ticket 
