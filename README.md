@@ -1,4 +1,4 @@
-# dev-learning — 업무 티켓 앱 실습 기록
+﻿# dev-learning — 업무 티켓 앱 실습 기록
 
 Java/Spring 경험을 기반으로 TypeScript·React·JPA·자동 테스트를 학습하는 프로젝트.
 **무엇을 설치하고, 어디서 어떤 명령을 실행하며, 왜 필요한지**를 기록한다.
@@ -6,7 +6,7 @@ Java/Spring 경험을 기반으로 TypeScript·React·JPA·자동 테스트를 �
 > Windows PowerShell 기준. 예제 경로는 `C:\Users\luna\Documents\dev-learning`이다. 다른 PC에서는 실제 경로로 바꾼다.
 > 명령 실패 시 다음 단계로 넘어가지 않고 원인을 확인한다.
 > 2026-11-03 기준: 8080에서 React 제공 및 상세 화면 새로고침·직접 접속 확인 완료.
-> JAR 실행은 아래 절차로 확인할 다음 단계이며 아직 성공 결과를 기록하지 않았다.
+> 사용자 실습으로 build.ps1의 Build complete와 생성된 JAR 실행 정상 동작까지 확인했다.
 
 ## 자주 쓰는 명령
 
@@ -201,7 +201,7 @@ Get-ChildItem ..\ticket-api\src\main\resources\static
 
 결과는 static/index.html과 static/assets다. static/dist/index.html이 아니다.
 App.tsx·TicketForm.tsx는 JavaScript로 변환·묶여 assets에 들어간다. 이동이 아니라 복사다.
-덮어쓰기는 새 빌드에서 사라진 옛 파일까지 삭제하지 않는다. 산출물 정리·자동화는 후속 단계에서 다룬다.
+덮어쓰기는 새 빌드에서 사라진 옛 파일까지 삭제하지 않는다. 아래 build.ps1은 복사 전에 생성물 전용 static 폴더를 정리해 이 문제를 해결한다.
 
 루트 .gitignore에는 다음 경로를 사용한다.
 
@@ -252,7 +252,7 @@ public class FrontendController {
 브라우저에서 React가 시작되면 React Router가 상세 화면을 선택한다. 모든 URL이 아닌 상세 경로만 연결했다.
 확인 완료: 8080 목록 조회·상세 새로고침·새 탭 직접 접속.
 
-## 6. 실행 JAR 만들기 — 다음 확인 단계
+## 6. 실행 JAR 만들기 — 수동 실행 확인 완료
 
 먼저 5절의 React 빌드·복사를 완료하고 기존 Spring 서버를 종료한다.
 
@@ -287,6 +287,52 @@ DB는 ticket-api/data/tickets.mv.db로 JAR 밖에 남는다. JAR만 복사해도
 
 spring.jpa.hibernate.ddl-auto=none은 Hibernate 자동 스키마 변경을 끈다.
 별도로 spring.sql.init.mode=always에 의해 schema.sql은 실행된다. none이 모든 스키마 변경을 막는 설정은 아니다.
+
+## 6-1. 한 번의 명령으로 검사·빌드·패키징
+
+새 PC에서는 2절대로 루트와 ticket-ui에서 npm ci를 먼저 실행한다. build.ps1은 설치 명령을 반복하지 않는다.
+실행 중인 Spring/JAR 서버는 Ctrl+C로 종료한다. 프런트/백엔드 검사를 모두 통과해야 새 JAR 패키징이 완료된다.
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning
+.\build.ps1
+```
+
+실행 순서:
+
+1. 루트 TypeScript 테스트
+2. 프런트엔드 테스트
+3. 프런트엔드 린트
+4. React 빌드
+5. 생성물 전용 static 폴더 정리 후 새 dist 복사
+6. Maven clean package: 백엔드 테스트 및 JAR 생성
+
+PowerShell의 스크립트 실행 정책 오류가 발생하면, 내용을 확인한 이 로컬 스크립트에 한해 다음처럼 실행할 수 있다.
+회사 관리 정책으로 제한된 경우에는 우회하지 않고 해당 환경의 정책을 따른다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+```
+
+이 옵션은 해당 PowerShell 프로세스에만 적용되며 사용자/시스템 실행 정책을 영구 변경하지 않는다.
+
+- $PSScriptRoot: 스크립트 파일이 있는 폴더. 실행한 터미널 위치와 관계없이 저장소를 기준으로 한다.
+- Push-Location / Pop-Location: 작업 폴더 이동 후 복원. finally를 사용해 실패해도 위치를 복원한다.
+- $ErrorActionPreference = 'Stop': 파일 복사 등의 PowerShell 오류에서 중단한다.
+- $LASTEXITCODE: npm/Maven의 종료 코드. 0이 아니면 throw로 중단하고 스크립트도 종료 코드 1을 반환한다.
+- 생성물 전용 static만 정리한다. 원본 src 파일이나 H2 data는 정리 대상이 아니다.
+- 이전 파일명을 가진 JS/CSS가 남지 않도록 static을 교체한다. static에 수작업 원본을 저장하지 않는다.
+- 자동화가 실패하면 실행 단계로 넘어가지 않는다. 실패 지점에 따라 예전 JAR이 남아 있을 수도 있다.
+- 서버 실행·Git 커밋·push는 자동화하지 않는다.
+
+Build complete 출력까지 확인한 뒤 직접 실행한다.
+
+```powershell
+cd .\ticket-api
+java -jar .\target\ticket-api-0.0.1-SNAPSHOT.jar
+```
+
+2026-11-03 실습 완료: 사용자가 build.ps1을 실행하여 Build complete를 확인했고, 생성된 JAR도 실행하여 정상 동작을 확인했다. 자동화는 TypeScript 테스트 → 프런트 테스트·린트·빌드 → static 교체 → 백엔드 테스트·JAR 패키징 순서로 실행된다.
 
 ## 7. 기능을 처음 추가할 때의 설치 명령
 
@@ -374,7 +420,7 @@ VS Code에서 Debug: Create JavaScript Debug Terminal과 breakpoint를 실습했
 5. 낙관적 잠금 → 화면 버전 전송 → 오래된 요청 409 거절.
 6. Vitest API 테스트 → React 폼 테스트.
 7. Spring에서 React 제공 → 상세 주소 직접 접속.
-8. 진행 중: JAR 실행 확인. 다음: 빌드·복사 자동화.
+8. build.ps1 빌드·복사·패키징 자동화 및 생성된 JAR 실행 확인 완료.
 
 수동 충돌 실습: 두 탭에서 같은 티켓 조회 → A 완료 → 새로고침하지 않은 B 완료 → 409 → 다시 조회 후 재오픈 성공.
 향후 Python API·LLM 기능을 연결할 예정이다. 아직 구현하지 않은 기능은 완료로 기록하지 않는다.
