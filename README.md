@@ -428,12 +428,69 @@ VS Code에서 Debug: Create JavaScript Debug Terminal과 breakpoint를 실습했
 
 기존 티켓 앱의 Controller → Service 구조를 활용한다. 아래 단계는 앞으로 진행할 실습이다.
 
-1. **첫 모델 호출**: 현재 Spring Boot 버전과 Spring AI의 호환성을 확인하고 모델 제공자를 선택한다. API 키를 환경 변수로 설정한 뒤 Java에서 첫 응답을 받는다.
+1. **첫 모델 호출**: Ollama에서 로컬 모델을 실행하고, Spring AI로 같은 모델을 호출해 Java에서 첫 응답을 받는다. 로컬 호출에는 외부 API 키가 필요 없다.
 2. **티켓 해결 방향 제안**: 티켓 제목을 프롬프트에 넣어 해결 방향을 요청하고, 제목만으로 판단하기 어려운 부분을 확인한다.
 3. **구조화된 응답**: 분류·우선순위·추천 조치를 Java DTO로 받아 각 필드의 값을 검증한다.
 4. **오류 처리와 테스트**: 모델 응답 지연과 호출 실패를 재현하고, 사용자에게 안내가 표시되는지 검사한다.
 5. **도구 호출**: 기존 티켓 조회 서비스를 도구로 제공해 모델이 조회한 티켓 정보를 바탕으로 답하도록 한다.
 6. **업무 매뉴얼 검색(RAG)**: 티켓과 관련된 매뉴얼 문단을 검색해 모델에 전달하고, 제안한 조치가 해당 문단에 근거하는지 확인한다.
+
+### 실습 기록: Ollama에서 로컬 모델 실행
+
+Windows에 [Ollama](https://ollama.com/download/windows)를 설치한 뒤 새 PowerShell에서 실행했다. 프로젝트 폴더로 이동할 필요는 없다.
+
+```powershell
+ollama --version
+ollama run qwen3:1.7b
+```
+
+모델에 “로그인 오류의 원인을 단정하지 말고 먼저 확인할 사항 두 가지를 알려 줘”라고 질문했다. 비밀번호 입력과 계정 잠금 여부를 확인하라는 한국어 답변을 받았다.
+대화를 열어 둔 채 다른 PowerShell에서 `ollama ps`를 실행해 모델 배치를 확인했다.
+
+| Ollama 버전 | 모델 | PROCESSOR | CONTEXT |
+| --- | --- | --- | --- |
+| 0.40.13 | qwen3:1.7b | 100% GPU | 4096 |
+
+### 실습 기록: Java에서 로컬 Ollama 호출
+
+Spring AI BOM 2.0.2와 `spring-ai-starter-model-ollama`를 사용했다. 모델은 `qwen3:1.7b`, 서버 주소는 `http://localhost:11434`로 설정했다.
+AI 코드는 `com.example.ticket_api.ai` 하위 패키지에 둔다. 첫 실습에서는 `OllamaDemo`를 `ai-demo` 프로필에서만 실행해 일반 서버 시작 시 모델에 질문하지 않도록 했다.
+
+Ollama 앱을 켠 상태에서 `ticket-api` 폴더에서 실행:
+
+```powershell
+.\mvnw.cmd clean spring-boot:run "-Dspring-boot.run.profiles=ai-demo"
+```
+
+패키지를 이동한 뒤 이전 컴파일 결과를 지우려고 `clean`을 사용했다. 사용자가 터미널에서 `[Ollama → Java]` 뒤에 한국어 답변이 출력되는 것을 확인했다.
+
+### 2026-11-04: 티켓 제목으로 AI 점검 사항 제안받기
+
+모델 호출을 다른 곳에서도 재사용할 수 있도록 `ai` 패키지의 `TicketAdviceService.suggest(title)`로 분리했다. `OllamaDemo`는 생성자로 서비스를 받아 제목을 전달하고 결과만 출력한다.
+
+- 실행 위치: `ticket-api`
+- 실행 명령: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=ai-demo"`
+- 확인 결과: “프린터 연결 오류”에 대해 케이블·포트, 설정·드라이버 두 가지 점검 제안이 한국어로 출력됐다. 이는 모델 호출 확인이며 실제 장애 원인을 검증한 것은 아니다.
+
+### Postman으로 티켓 AI 제안 API 호출
+
+Java 코드 수정 없이 요청마다 다른 제목을 보낼 수 있도록 컨트롤러에서 `TicketAdviceService.suggest(title)`를 호출한다.
+Ollama를 켜고 `ticket-api`에서 `.\mvnw.cmd spring-boot:run`으로 서버를 실행한다. 이 API에는 `ai-demo` 프로필이 필요 없다.
+
+- 요청: `POST http://localhost:8080/api/ai/ticket-advice`
+- Postman: **Body → raw → JSON**, 본문 `{"title":"첨부파일 업로드 실패"}`
+- 확인 결과: `200 OK`. JSON의 `advice` 필드에 파일 크기 제한과 지원 형식을 점검하라는 한국어 제안이 반환됐다. 답변 문구는 호출마다 달라질 수 있다.
+- 공백 제목 확인: 같은 URL에 `{"title":"   "}`를 보내자 `400 Bad Request`가 반환됐다. 실제 응답 본문에는 `timestamp`, `status`, `error`, `path`가 있었고 별도의 안내 메시지는 없었다.
+
+### 2026-11-04: AI 제안 컨트롤러의 공백 제목 테스트
+
+`ticket-api`에서 `.\mvnw.cmd "-Dtest=TicketAdviceControllerTest" test` 실행: 테스트 1개 통과.
+MockMvc로 공백 제목을 보냈을 때 400을 반환하고, `verifyNoInteractions(adviceService)`로 AI 서비스를 호출하지 않았음을 확인했다.
+처음에 테스트 클래스를 `src/main/java`에 두어 테스트 전용 `@WebMvcTest` import를 찾지 못했다. 같은 패키지 구조의 `src/test/java`로 이동해 해결했다.
+
+정상 제목 테스트를 추가한 뒤 같은 명령으로 2개 통과. 요청 제목의 앞뒤 공백을 제거해 서비스에 한 번 전달하고, 서비스가 반환한 조언을 HTTP 200 응답의 `advice` 필드로 돌려주는지 확인했다.
+
+마무리 검증: `ticket-api`에서 `.\mvnw.cmd clean test` 실행. 기존 티켓 기능과 새 AI 컨트롤러 테스트를 포함해 총 39개 통과(실패·오류·건너뜀 0), BUILD SUCCESS.
 
 ### 수업 기록 추가 양식
 
