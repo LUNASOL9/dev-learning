@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router";
 import type { Ticket } from "../../tickets";
+import TicketAdvice from "./TicketAdvice";
 
 type TicketDetailProps  = {
     tickets: Ticket[];
@@ -55,6 +56,8 @@ export default function TicketDetail({
             <p>
                 상태{ticket.status ==="OPEN" ? "미처리": "처리 완료"}
             </p>
+
+            <TicketAdvice key={ticket.id} title={ticket.title} />
 
             <Link to="/">목록으로</Link>
         </main>

@@ -492,6 +492,55 @@ MockMvc로 공백 제목을 보냈을 때 400을 반환하고, `verifyNoInteract
 
 마무리 검증: `ticket-api`에서 `.\mvnw.cmd clean test` 실행. 기존 티켓 기능과 새 AI 컨트롤러 테스트를 포함해 총 39개 통과(실패·오류·건너뜀 0), BUILD SUCCESS.
 
+### 2026-11-05: React 상세 화면에서 AI 도움말 요청
+
+`TicketAdvice` 컴포넌트를 상세 화면에 연결했다. 제목을 `POST /api/ai/ticket-advice`로 보내고, 요청 중에는 버튼을 비활성화하며 성공 답변 또는 실패 안내를 표시한다. `key={ticket.id}`로 다른 티켓으로 이동하면 컴포넌트 상태를 새로 시작한다.
+`ticket-advice-api.ts`는 HTTP 실패와 응답 형식 오류를 구분한다. `advice`가 비어 있지 않은 문자열인지 검사한 뒤 반환한다.
+
+추가 설치는 없었다. Windows 시작 메뉴에서 Ollama를 실행하고 `http://localhost:11434`에서 실행 상태를 확인한다. Spring 요청 시 모델이 로드되므로 별도로 CLI 대화를 열 필요는 없다.
+
+첫 번째 터미널에서 Spring Boot 실행:
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-api
+.\mvnw.cmd spring-boot:run
+```
+
+두 번째 터미널에서 Vite 실행:
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-ui
+npm.cmd run dev
+```
+
+개발 화면은 `http://localhost:5173`에서 확인한다. `/api` 요청은 Vite 프록시가 Spring Boot의 8080 포트로 전달한다. 8080은 이전에 static에 복사한 React 빌드를 제공하므로 소스를 수정해도 바로 바뀌지 않는다. 이번 실습에서도 처음에 8080 화면을 보다가 5173으로 변경해 해결했다. 사용자가 AI 답변 표시와 요청 중/완료 후 동작을 확인했다. 답변 도착은 연동 성공을 뜻하며 내용의 정확성은 별도 검토가 필요하다.
+
+파일별 테스트 실행 위치: `ticket-ui`. 두 파일 모두 각각 3개 통과를 확인했다.
+
+```powershell
+npm.cmd test -- src/ticket-advice-api.test.ts
+npm.cmd test -- src/TicketAdvice.test.tsx
+```
+
+- API 함수 테스트: 정상 제목 전송·답변 반환, advice 누락 거절, HTTP 503 오류 처리. fetch를 가짜로 바꿔 검사한다. 503은 테스트에서 준비한 상태이며 실제 Ollama 중단 시 서버 응답을 확인한 것은 아니다.
+- 컴포넌트 테스트: 성공 답변 표시, 실패 안내·버튼 재활성화, 요청 대기 중 버튼 비활성화·중복 요청 방지. API 함수를 가짜로 바꿔 검사한다.
+- 대기 상태는 Promise의 resolve 함수를 테스트 지역변수에 보관하고 나중에 호출해 재현했다. 직접 Promise를 완료할 때는 act로 React 상태 업데이트를 처리한 뒤 검사한다. 이 테스트에는 실제 Ollama와 Spring 서버가 필요 없다.
+
+커밋 전 전체 확인 명령(개별 테스트 결과와 별도로 실행 결과 확인 필요):
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-ui
+npm.cmd test
+npm.cmd run build
+npm.cmd run lint
+cd ..
+npm.cmd test
+git diff --check
+git status --short
+```
+
+서버 종료는 Spring Boot와 Vite 터미널에서 각각 Ctrl+C로 한다.
+
 ### 수업 기록 추가 양식
 
 ```text
