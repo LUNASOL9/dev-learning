@@ -31,6 +31,22 @@ public class TicketAdviceController {
         }
 
         String advice = ticketAdviceService.suggest(title.strip());
-        return new AdviceResponse(advice);
+        return new AdviceResponse(advice);// 기존: 문자열을 AdviceResponse로(record) 감싸서 반환
     }
-}
+
+
+
+
+    @PostMapping("/ticket-advice/structured")
+    public TicketAdviceResult suggestStructured(@RequestBody AdviceRequest request){
+        String title = request.title();
+
+        if(title == null || title.isBlank() || title.strip().length() > 50){
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,             "티켓 제목은 1~50자로 입력해 줘."
+            );
+        }
+        return ticketAdviceService.suggestStructured(request.title.strip()); // 신규: 서비스가 만든 DTO를 그대로 반환
+    }
+
+}//class

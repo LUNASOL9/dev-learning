@@ -17,9 +17,11 @@ public class OllamaDemo implements CommandLineRunner{
     @Override
     public void run(String... arg){
 
-        String answer = ticketAdviceService.suggest("프린터 연결 오류");
+        TicketAdviceResult  answer = ticketAdviceService.suggestStructured("프린터 연결 오류");
 
-        System.out.println("[Ollama → Java] " + answer);
+        //System.out.println("[Ollama → Java] " + answer);
+        System.out.println("[AI 분류] " + answer.category());
+        System.out.println("[AI 확인 사항] " + answer.checks());
 
     }// run
 }// class

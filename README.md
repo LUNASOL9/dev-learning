@@ -541,6 +541,52 @@ git status --short
 
 서버 종료는 Spring Boot와 Vite 터미널에서 각각 Ctrl+C로 한다.
 
+### 2026-11-06: AI 답변을 DTO로 받고 내용 검증하기
+
+추가 설치 없이 기존 Spring AI와 Ollama를 사용했다. 문자열 전체를 표시하던 방식에서 분류와 확인 사항을 각각 다루기 위해 `TicketAdviceResult(String category, List<String> checks)` record를 추가했다. 이 DTO는 JPA 엔티티가 아니며 DB에 저장하지 않는다.
+
+- `TicketAdviceService.suggestStructured(title)`: `.call().entity(TicketAdviceResult.class)`로 모델 응답을 DTO로 변환한다.
+- `TicketAdviceValidator.validate(result)`: 응답·분류가 존재하는지, 확인 사항 목록이 정확히 두 개인지, 각 항목이 null 또는 공백이 아닌지 검사한다. 위반하면 IllegalStateException을 던진다.
+- 검증기는 외부 의존성이나 변경되는 상태가 없는 일반 Java 객체로 생성했다. 정상 응답만 서비스에서 반환한다.
+- 기존 문자열 API와 React 화면은 유지하고, 구조화된 응답용 API를 추가했다. React에서 새 API를 사용하는 작업은 다음 수업에서 진행한다.
+
+Ollama 실행 후 Java 데모 확인(기존 Spring 서버는 먼저 종료):
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-api
+.\mvnw.cmd compile
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=ai-demo"
+```
+
+데모에서 `[AI 분류]`와 `[AI 확인 사항]` 출력으로 DTO 필드를 확인했다. 데모 서버를 Ctrl+C로 종료하고 일반 서버를 시작한다.
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+Postman 확인:
+
+- `POST http://localhost:8080/api/ai/ticket-advice/structured`
+- Body → raw → JSON: `{"title":"프린터 연결 오류"}`
+- 실제 결과: 200 OK, category와 문자열 두 개가 담긴 checks 배열 반환.
+- 모델 답변에 “프린터 드라이어”라는 표현이 포함됐다. 구조 검증은 답변 내용의 정확성까지 보장하지 않음을 확인했다.
+
+테스트 실행 위치: `ticket-api`.
+
+```powershell
+.\mvnw.cmd "-Dtest=TicketAdviceValidatorTest" test
+.\mvnw.cmd "-Dtest=TicketAdviceControllerTest" test
+.\mvnw.cmd clean test
+git diff --check
+```
+
+- 검증기 테스트 5개 통과: 정상 응답, 공백 분류, 확인 사항 한 개, 공백 항목, null 목록.
+- 컨트롤러 테스트 4개 통과: 기존 2개에 구조화된 응답·제목 공백 제거 검사와 공백 제목 400·서비스 미호출 검사를 추가했다. 모델 서비스는 가짜로 대체했다.
+- 사용자 확인 결과: 전체 백엔드 테스트 46개 통과, git diff --check 문제없음. 실제 모델 연결은 데모와 Postman으로 별도 확인했다.
+- 실습 중 TicketAdviceValidator 파일의 .java 확장자가 빠져 타입을 찾지 못했다. 확장자를 수정하고 컴파일 성공을 확인했다.
+
+다음 단계: React에서 category와 checks를 구분해 표시하고, 새 응답 구조를 검증하는 테스트를 추가한다. 모델 응답 검증 실패의 HTTP 오류 안내도 후속 작업이다.
+
 ### 수업 기록 추가 양식
 
 ```text
