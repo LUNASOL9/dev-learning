@@ -1,10 +1,17 @@
-export async function fetchTicketAdvice(title: string): Promise<string> {
-    const response = await fetch("/api/ai/ticket-advice", {
-           method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({title}),
+export type TicketAdviceResult = {
+    category: string;
+    checks: string[];
+};
+
+export async function fetchStructuredTicketAdvice(
+    title: string
+): Promise<TicketAdviceResult> {
+    const response = await fetch("/api/ai/ticket-advice/structured", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title }),
     });
 
     if (!response.ok) {
@@ -13,16 +20,25 @@ export async function fetchTicketAdvice(title: string): Promise<string> {
 
     const data: unknown = await response.json();
 
-    if(typeof data != "object" ||
+    if (
+        typeof data !== "object" ||
         data === null ||
-        !("advice" in data) ||
-        typeof data.advice != "string" ||
-        data.advice.trim() === ""
-    ){
-        throw new Error("AI 도움말 응답 형식이 올바르지 않습니다.")
+        !("category" in data) ||
+        typeof data.category !== "string" ||
+        data.category.trim() === "" ||
+        !("checks" in data) ||
+        !Array.isArray(data.checks) ||  /*  checks가 실제 배열인지 검사해. 배열임을 확인 */
+        data.checks.length !== 2 ||
+        !data.checks.every(             /*  “모든 항목이 문자열이고, 공백뿐인 값도 아닌가?” */
+            (check: unknown) =>
+                typeof check === "string" && check.trim() !== ""
+        )
+    ) {
+        throw new Error("AI 도움말 응답 형식이 올바르지 않습니다.");
     }
 
-
-    // 응답 검증과 반환은 다음 단계에서 함께 작성하자.
-    return data.advice;
+    return {
+        category: data.category,
+        checks: data.checks,
+    };
 }

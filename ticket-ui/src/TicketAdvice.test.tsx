@@ -6,13 +6,14 @@ import {act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import TicketAdvice from "./TicketAdvice";
-import { fetchTicketAdvice } from "./ticket-advice-api";
+import { fetchStructuredTicketAdvice } from "./ticket-advice-api";
+import type { TicketAdviceResult } from "./ticket-advice-api";
 
 // 1. 모듈 모킹(Mocking)
 // 실제 서버와 통신하는 API 함수를 가짜(Mock) 함수로 대체합니다.
 // 네트워크 요청 없이 테스트를 빠르고 안정적으로 수행하기 위함입니다.
 vi.mock("./ticket-advice-api", () => ({
-    fetchTicketAdvice: vi.fn(),
+    fetchStructuredTicketAdvice: vi.fn(),
 }));
 
 // 2. 테스트 후 정리 작업 (Cleanup)
@@ -23,15 +24,22 @@ afterEach(() => {
 });
 
 // 3. 테스트 케이스 작성
-test("도움말을 요청하면 티켓 제목을 전달하고 답변을 표시한다", async () => {
+test("도움말을 요청하면 분류와 확인 사항을 표시한다", async () => {
     // 사용자 상호작용(클릭, 입력 등)을 실제 브라우저처럼 시뮬레이션하기 위해 설정합니다.
     const user = userEvent.setup();
 
+    const responseAdvice: TicketAdviceResult = {
+        category: "데이터베이스",
+        checks: [
+            "연결 로그를 확인하세요.",
+            "서버 접속 상태를 확인하세요.",
+        ],
+    };
+
+
     // 4. 모킹된 API의 응답 설정
     // 가짜 API 함수가 호출되었을 때 성공적으로 반환할 데이터(Resolved Value)를 지정합니다.
-    vi.mocked(fetchTicketAdvice).mockResolvedValue(
-        "데이터베이스 연결 로그를 확인하세요."
-    );
+    vi.mocked(fetchStructuredTicketAdvice).mockResolvedValue(responseAdvice);
 
     // 5. 컴포넌트 렌더링
     // 테스트 대상 컴포넌트에 title prop을 전달하여 가상 DOM에 렌더링합니다.
@@ -47,19 +55,25 @@ test("도움말을 요청하면 티켓 제목을 전달하고 답변을 표시�
 
     // 7. API 호출 검증
     // API 함수가 정확히 1번 호출되었는지 검증합니다.
-    expect(fetchTicketAdvice).toHaveBeenCalledTimes(1);
+    expect(fetchStructuredTicketAdvice).toHaveBeenCalledTimes(1);
 
     // API 함수가 올바른 인자("데이터베이스 연결 오류")와 함께 호출되었는지 검증합니다.
-    expect(fetchTicketAdvice).toHaveBeenCalledWith(
+    expect(fetchStructuredTicketAdvice).toHaveBeenCalledWith(
         "데이터베이스 연결 오류"
     );
 
-    // 8. 화면 상태 변화 검증 (비동기)
-    // 비동기 통신 후 화면에 API로부터 받은 답변 텍스트가 정상적으로 나타났는지 확인합니다.
-    // (findByText는 요소가 나타날 때까지 비동기로 기다려줍니다.)
-    expect(
-        await screen.findByText("데이터베이스 연결 로그를 확인하세요.")
-    ).toBeInTheDocument();
+
+    expect(// 테스트할 대상 지정.
+        await screen.findByRole("heading", {
+            name: "분류: 데이터베이스",
+        })
+    ).toBeInTheDocument(); //toBeInTheDocument 찾은 요소가 실제 DOM에 존재하는지 확인하는 Matcher
+
+    const items = screen.getAllByRole("listitem");
+
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent("연결 로그를 확인하세요.");
+    expect(items[1]).toHaveTextContent("서버 접속 상태를 확인하세요.");
 
     // 9. 최종 컴포넌트 상태 검증
     // 요청이 끝난 후 버튼이 다시 활성화 상태(enabled)인지 확인합니다.
@@ -77,7 +91,7 @@ test("도움말 요청에 실패하면 오류를 표시하고 다시 요청할 �
     const user = userEvent.setup();
 
     // API 함수가 실패하는 상황을 준비
-    vi.mocked(fetchTicketAdvice).mockRejectedValue(
+    vi.mocked(fetchStructuredTicketAdvice).mockRejectedValue(
         new Error("AI 도움말 요청 실패: 503")
     );
 
@@ -115,14 +129,14 @@ test("도움말 요청 중에는 버튼을 비활성화한다", async () => {
     const user = userEvent.setup();
 
     // 나중에 우리가 직접 응답을 완료할 때 사용할 함수
-    let resolveAdvice!: (value: string) => void;//“문자열을 받는 함수를 나중에 resolveAdvice에 넣을 거야.”
+    let resolveAdvice!: (value: TicketAdviceResult) => void;//“문자열을 받는 함수를 나중에 resolveAdvice에 넣을 거야.”
 
     // 아직 성공도 실패도 하지 않은, 대기 중인 Promise
-    const pendingAdvice = new Promise<string>((resolve) => {
+    const pendingAdvice = new Promise<TicketAdviceResult>((resolve) => {
         resolveAdvice = resolve;
     });
 
-    vi.mocked(fetchTicketAdvice).mockReturnValue(pendingAdvice);
+    vi.mocked(fetchStructuredTicketAdvice).mockReturnValue(pendingAdvice);
 
     render(<TicketAdvice title="데이터베이스 연결 오류" />);
 
@@ -144,11 +158,17 @@ test("도움말 요청 중에는 버튼을 비활성화한다", async () => {
 
     // 비활성화된 버튼을 다시 눌러도 추가 요청이 없어야 한다.
     await user.click(loadingButton);
-    expect(fetchTicketAdvice).toHaveBeenCalledTimes(1);
+    expect(fetchStructuredTicketAdvice).toHaveBeenCalledTimes(1);
 
     // 이제 우리가 직접 응답을 도착시킨다.
     await act(async () => {
-        resolveAdvice("데이터베이스 연결 로그를 확인하세요.");
+        resolveAdvice({
+            category: "데이터베이스",
+            checks: [
+                "데이터베이스 연결 로그를 확인하세요.",
+                "서버 접속 상태를 확인하세요.",
+            ],
+        });
     });
 
     expect(

@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { fetchTicketAdvice } from "./ticket-advice-api";
+import { fetchStructuredTicketAdvice  } from "./ticket-advice-api";
+import type { TicketAdviceResult } from "./ticket-advice-api";
 
 type TicketAdviceProps = {
     title : string;
 };
 
 export default function TicketAdvice({title}: TicketAdviceProps){
-    const [advice, setAdvice] = useState("");
+    const [advice, setAdvice] = useState<TicketAdviceResult | null>(null); /* (null) 최초 시작값 | TicketAdviceResult | null*/
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -16,11 +17,11 @@ export default function TicketAdvice({title}: TicketAdviceProps){
         }
 
         setIsLoading(true);
-        setAdvice("");
+        setAdvice(null);
         setErrorMessage("");
 
         try {
-            const result = await fetchTicketAdvice(title);
+            const result = await fetchStructuredTicketAdvice(title);
             setAdvice(result);
         } catch (error: unknown) {
             setErrorMessage(
@@ -58,7 +59,16 @@ export default function TicketAdvice({title}: TicketAdviceProps){
             )}
 
             {advice && (
-                <p style={{ whiteSpace: "pre-wrap" }}>{advice}</p>
+                <div>
+                    <h3>분류: {advice.category}</h3>
+
+                    <h3>먼저 확인할 사항</h3>
+                    <ul>
+                        {advice.checks.map((check, index)=>(
+                           <li key= {index}>{check}</li>
+                        ))}
+                    </ul>
+                </div>
             )}
 
         </section>

@@ -587,6 +587,41 @@ git diff --check
 
 다음 단계: React에서 category와 checks를 구분해 표시하고, 새 응답 구조를 검증하는 테스트를 추가한다. 모델 응답 검증 실패의 HTTP 오류 안내도 후속 작업이다.
 
+### 2026-11-09: 구조화된 AI 응답을 React에 연결
+
+추가 설치 없이 기존 화면을 새 API에 연결했다. TypeScript의 `TicketAdviceResult`는 category 문자열과 checks 문자열 배열을 표현한다. 타입 선언만으로 서버 응답이나 배열 길이를 보장하지 않으므로 unknown 응답을 검사한다.
+
+- `fetchStructuredTicketAdvice(title)`가 `/api/ai/ticket-advice/structured`에 JSON 제목을 전송한다.
+- 비어 있지 않은 category, 배열인 checks, 정확히 두 항목, 각 항목의 문자열·공백 여부를 검사한다. Array.isArray와 every를 사용했다.
+- `TicketAdvice`의 상태를 `TicketAdviceResult | null`로 변경했다. category는 제목으로, checks는 map으로 만든 목록으로 표시한다. 요청 중·실패 안내는 유지한다.
+- 사용자 확인: 실제 개발 화면에서 구조화된 답변 표시 성공.
+- 사용하지 않는 프런트의 기존 문자열 호출 함수와 테스트 3개를 삭제했다. 백엔드의 기존 문자열 API는 유지한다.
+
+실행 위치: ticket-ui. 기존처럼 Ollama와 Spring Boot, Vite를 실행하고 개발 화면은 5173 포트에서 확인한다.
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-ui
+npm.cmd test -- src/ticket-advice-api.test.ts
+npm.cmd test -- src/TicketAdvice.test.tsx
+npm.cmd test
+npm.cmd run build
+npm.cmd run lint
+```
+
+사용자 확인 결과: 프런트 테스트 총 16개 통과, 빌드·린트 통과.
+
+| 테스트 파일 | 개수 | 주요 확인 사항 |
+| --- | --- | --- |
+| ticket-api.test.ts | 3 | 기존 티켓 요청·응답 검증 |
+| TicketForm.test.tsx | 6 | 폼 입력·등록 검증 |
+| ticket-advice-api.test.ts | 4 | 정상 구조화 응답, 한 항목 거절, 공백 항목 거절, HTTP 503 처리 |
+| TicketAdvice.test.tsx | 3 | 분류·목록 표시, 실패 안내, 요청 중 버튼 비활성화 |
+
+테스트의 HTTP 503 응답은 가짜 fetch로 준비했다. HTTP 오류 응답도 fetch의 Promise는 성공할 수 있으므로 mockResolvedValue로 응답을 주고, 실제 함수의 response.ok 검사에서 예외가 발생하는지 확인했다.
+테스트 추가 중 한 항목 거절 테스트가 파일에서 빠진 것을 실행 목록과 실제 소스로 확인하고 복구했다. 이후 기존 문자열 테스트 정리로 API 테스트 수가 7개에서 4개로 바뀌었다.
+
+다음 단계: 모델 호출·응답 검증 실패에 대한 HTTP 오류 안내를 정리한다.
+
 ### 수업 기록 추가 양식
 
 ```text
