@@ -622,6 +622,44 @@ npm.cmd run lint
 
 다음 단계: 모델 호출·응답 검증 실패에 대한 HTTP 오류 안내를 정리한다.
 
+### 2026-11-10: AI 응답 검증 실패의 HTTP 안내와 React 오류 처리
+
+추가 설치 없이 AI 응답 검증 실패를 전용 예외로 구분하고, 사용자 안내 메시지를 JSON으로 반환하도록 연결했다.
+
+- `TicketAdviceValidator`: 기존 IllegalStateException 대신 `InvalidAiResponseException`을 던진다. 내부 검증 조건과 원인 메시지는 유지한다.
+- `AiExceptionHandler`: 해당 예외를 HTTP 502와 `{"message":"AI 답변을 올바르게 생성하지 못했습니다. 다시 요청해 주세요."}`로 변환한다. Spring MVC가 예외 처리기를 호출하며 검증기가 직접 호출하지 않는다.
+- `api-error.ts`: 기존 티켓 API의 readErrorMessage 함수를 공통 파일로 옮겼다. JSON의 비어 있지 않은 message 문자열을 읽고, 빈 본문·HTML·잘못된 message는 기본 안내로 처리한다.
+- `fetchStructuredTicketAdvice`: 실패 응답에서 공통 함수로 메시지를 읽어 Error를 던진다. 기존 TicketAdvice 컴포넌트의 catch와 오류 영역이 이 메시지를 표시한다.
+
+흐름: Controller → Service → Validator에서 예외 발생 → Spring MVC의 AiExceptionHandler → HTTP 502와 JSON → 프런트의 readErrorMessage → 오류 상태 및 화면 표시.
+이번 구현은 검증기가 던지는 전용 예외를 대상으로 한다. DTO 변환 자체의 실패, 실제 Ollama 연결 실패 처리는 후속 단계다.
+
+테스트 실행 위치와 명령:
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-api
+.\mvnw.cmd "-Dtest=TicketAdviceValidatorTest" test
+.\mvnw.cmd "-Dtest=TicketAdviceControllerTest" test
+.\mvnw.cmd test
+
+cd ..\ticket-ui
+npm.cmd test -- src/ticket-advice-api.test.ts
+npm.cmd test
+npm.cmd run build
+npm.cmd run lint
+
+cd ..
+git diff --check
+git status --short
+```
+
+사용자 확인 결과: 검증기 테스트 5개, 컨트롤러 테스트 5개, 백엔드 전체 47개 통과. 프런트 AI API 테스트 6개, 프런트 전체 18개 통과. 빌드·린트·git diff --check 문제없음.
+
+- 컨트롤러 테스트는 가짜 서비스가 전용 예외를 던지게 하고 실제 처리기의 502·JSON·사용자 안내 변환을 검증했다.
+- 프런트 테스트는 가짜 fetch의 502 JSON 안내를 추출하는 경우와 502 HTML 본문에서 기본 메시지로 대체하는 경우를 추가했다. 실제 Ollama 중단 실습을 한 것은 아니다.
+- `JSON.stringify(message)`는 JSON 문자열이고, `JSON.stringify({ message })`는 message 필드를 가진 JSON 객체다. 서버 오류 응답의 모양에 맞춰 객체로 준비했다.
+- 루트에서 npm test에 테스트 파일명을 넘기면 루트 검색 테스트에 인수로 전달된다. Vitest 파일 실행은 ticket-ui 폴더에서 하고 출력의 파일명·테스트 수를 확인한다.
+
 ### 수업 기록 추가 양식
 
 ```text

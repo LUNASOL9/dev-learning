@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 import java.util.List;
 
@@ -107,4 +108,30 @@ class TicketAdviceControllerTest {
         // 3. 서비스가 호출되지 않았는지 확인   잘못된 입력은 모델을 호출하기 전에 거절해야 한다
         verifyNoInteractions(adviceService);
     }
+
+
+
+
+    @Test
+    void returnsBadGatewayWhenAiResponseIsInvalid() throws Exception {
+        // 서비스에서 AI 응답 검증에 실패한 상황을 준비
+        when(adviceService.suggestStructured("프린터 연결 오류"))
+            .thenThrow(new InvalidAiResponseException(
+                "AI 확인 사항은 정확히 두 개여야 합니다."
+            ));
+
+        mockMvc.perform(post("/api/ai/ticket-advice/structured")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "프린터 연결 오류"}
+                        """))
+            .andExpect(status().isBadGateway())
+            .andExpect(content().contentTypeCompatibleWith(
+                MediaType.APPLICATION_JSON
+            ))
+            .andExpect(jsonPath("$.message").value(
+                "AI 답변을 올바르게 생성하지 못했습니다. 다시 요청해 주세요."
+            ));
+    }
+
 }//class

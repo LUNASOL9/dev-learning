@@ -1,3 +1,5 @@
+import { readErrorMessage } from "./api-error";
+
 export type TicketAdviceResult = {
     category: string;
     checks: string[];
@@ -15,7 +17,9 @@ export async function fetchStructuredTicketAdvice(
     });
 
     if (!response.ok) {
-        throw new Error(`AI 도움말 요청 실패: ${response.status}`);
+        //throw new Error(`AI 도움말 요청 실패: ${response.status}`);
+        const x = await readErrorMessage(response, `AI 도움말 요청 실패: ${response.status}`);
+        throw new Error(x);
     }
 
     const data: unknown = await response.json();

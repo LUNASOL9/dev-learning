@@ -109,3 +109,37 @@ test("구조화된 응답의 확인 사항이 한 개이면 오류를 던진다"
     await expect(fetchStructuredTicketAdvice("프린터 연결 오류"))
         .rejects.toThrow("AI 도움말 응답 형식이 올바르지 않습니다.");
 });
+
+test("AI 응답 검증에 실패하면 서버 안내 메시지로 오류를 던진다", async () => {
+
+    const message = "AI 답변을 올바르게 생성하지 못했습니다. 다시 요청해 주세요.";
+
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(JSON.stringify({ message }), {
+            status: 502,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchStructuredTicketAdvice("프린터 연결 오류")).rejects.toThrow(message);
+});
+
+test("오류 응답이 HTML이면 기본 오류 메시지를 사용한다", async () => {
+
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response("<html><body>Bad Gateway</body></html>", {
+            status: 502,
+            headers: {
+                "Content-Type": "text/html",
+            },
+        })
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchStructuredTicketAdvice("프린터 연결 오류")).rejects.toThrow("AI 도움말 요청 실패: 502");
+
+});

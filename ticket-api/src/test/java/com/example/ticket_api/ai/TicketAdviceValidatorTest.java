@@ -40,9 +40,9 @@ class TicketAdviceValidatorTest {
             )
         );
 
-        // 3. validate(result)가 IllegalStateException을 던지는지 확인
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class , () -> validator.validate(result)
+        // 3. validate(result)가 InvalidAiResponseException을 던지는지 확인
+        InvalidAiResponseException exception = assertThrows(
+            InvalidAiResponseException.class , () -> validator.validate(result)
         ) ;
 
             assertEquals(
@@ -68,9 +68,9 @@ class TicketAdviceValidatorTest {
             )
         );
 
-        // 3. validate()가 IllegalStateException을 던지는지 확인
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class , () -> validator.validate(result)
+        // 3. validate()가 InvalidAiResponseException을 던지는지 확인
+        InvalidAiResponseException exception = assertThrows(
+            InvalidAiResponseException.class , () -> validator.validate(result)
         ) ;
 
         assertEquals("AI 확인 사항은 정확히 두 개여야 합니다.", exception.getMessage());
@@ -92,8 +92,8 @@ class TicketAdviceValidatorTest {
             )
         );
 
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class , () -> validator.validate(result)
+        InvalidAiResponseException exception = assertThrows(
+            InvalidAiResponseException.class , () -> validator.validate(result)
         ) ;
 
         assertEquals("AI 확인 사항에 빈 내용이 있습니다.", exception.getMessage());
@@ -111,8 +111,8 @@ class TicketAdviceValidatorTest {
             null
         );
 
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class , () -> validator.validate(result)
+        InvalidAiResponseException exception = assertThrows(
+            InvalidAiResponseException.class , () -> validator.validate(result)
         ) ;
 
         assertEquals("AI 확인 사항은 정확히 두 개여야 합니다.", exception.getMessage());
