@@ -38,6 +38,7 @@ public class AiExceptionHandler {
 // ⑥ HTTP 502 + JSON 안내 메시지 반환
     public record ErrorResponse(String message) {}
 
+    //모델 응답 내용을 사용할 수 없음
     @ExceptionHandler (InvalidAiResponseException.class)
     public ResponseEntity<ErrorResponse> handleInvalidAiResponse(
             InvalidAiResponseException exception) {
@@ -48,4 +49,17 @@ public class AiExceptionHandler {
                 "AI 답변을 올바르게 생성하지 못했습니다. 다시 요청해 주세요."
             ));
     }
-}
+
+
+
+    //모델 연결 문제로 AI 기능을 제공할 수 없음     예) LLM 서버가 꺼져 있음
+    @ExceptionHandler(AiServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleAiServiceUnavailable(
+            AiServiceUnavailableException exception) {
+
+        return ResponseEntity
+            .status(HttpStatus.SERVICE_UNAVAILABLE) //503
+            .body(new ErrorResponse(exception.getMessage()));
+    }
+
+}//class

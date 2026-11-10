@@ -2,6 +2,7 @@ package com.example.ticket_api.ai;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 
 @Service
 public class TicketAdviceService {
@@ -31,7 +32,10 @@ public class TicketAdviceService {
 
     public TicketAdviceResult suggestStructured(String title){
 
-        TicketAdviceResult result = chatClient.prompt()
+        TicketAdviceResult result;
+
+        try{
+            result= chatClient.prompt()
                 .system("""
                     너는 업무 티켓을 검토하는 지원 담당자야.
                     원인을 단정하지 말고 먼저 확인할 사항을 제안해.
@@ -43,9 +47,12 @@ public class TicketAdviceService {
                 .call()
                 // Spring AI는 DTO 구조에 맞는 응답 형식을 모델에 안내하고, 받은 응답을 Java 객체로 변환. 공식 문서에서도 record를 이렇게 받는 방법을 설명
                 .entity(TicketAdviceResult.class);  // 지정한 Java 타입으로 변환해 받기
+        }catch(ResourceAccessException exception){
+            throw new  AiServiceUnavailableException(exception);
+            //아래의 검증·반환은 실행되지 않음
+        }
 
         adviceValidator.validate(result);
-
         return result;
 
     }//suggestStructured

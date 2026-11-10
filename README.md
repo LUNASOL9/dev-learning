@@ -660,6 +660,59 @@ git status --short
 - `JSON.stringify(message)`는 JSON 문자열이고, `JSON.stringify({ message })`는 message 필드를 가진 JSON 객체다. 서버 오류 응답의 모양에 맞춰 객체로 준비했다.
 - 루트에서 npm test에 테스트 파일명을 넘기면 루트 검색 테스트에 인수로 전달된다. Vitest 파일 실행은 ticket-ui 폴더에서 하고 출력의 파일명·테스트 수를 확인한다.
 
+### 2026-11-10: 실제 Ollama 연결 실패 안내와 정상 복구
+
+Ollama를 종료해 실제 연결 실패를 재현했다. `ResourceAccessException`에 Connection refused가 기록되는 것을 확인했다.
+
+- `TicketAdviceService.suggestStructured()`의 모델 호출 구간에서 ResourceAccessException을 잡아 `AiServiceUnavailableException`으로 변환한다. 원래 예외는 cause로 보관한다.
+- `AiExceptionHandler`는 HTTP 503과 `{"message":"AI 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요."}`를 반환한다.
+- 이 처리는 구조화된 API에 적용했다. 기존 문자열 suggest()는 이번 변경 대상이 아니다.
+- 연결 거절 외에도 ResourceAccessException은 다른 I/O 실패를 나타낼 수 있으므로, 사용자 안내에서 Ollama 종료로 원인을 단정하지 않는다.
+
+처음에는 연결 실패 로그가 나와도 Postman 요청이 계속 대기했다. application.properties에 다음 설정을 추가하고 Spring 서버를 재시작한 뒤 503 안내 수신을 확인했다.
+
+```properties
+# 첫 시도만 수행하고 자동 재시도하지 않음
+spring.ai.retry.max-attempts=1
+```
+
+이는 시도 횟수 제한이며 연결·응답 시간 제한은 아니다. 대기 시간 제한은 후속 실습에서 다룬다.
+
+실제 확인 순서:
+
+1. 수정한 Spring 서버를 재시작한다.
+2. Windows 트레이에서 Ollama를 Quit/종료한다. ollama stop은 모델만 내리므로 서버 종료와 다르다.
+3. Postman에서 POST /api/ai/ticket-advice/structured에 JSON 제목을 보낸다.
+4. HTTP 503과 사용자 안내 메시지를 확인한다.
+5. localhost:5173 상세 화면에서도 오류 안내와 버튼 재활성화를 확인한다.
+6. 시작 메뉴에서 Ollama를 다시 실행하고 같은 화면에서 재요청한다. 오류가 사라지고 분류·확인 사항이 표시되는 정상 복구까지 확인했다.
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-api
+.\mvnw.cmd spring-boot:run
+```
+
+Postman 요청: `POST http://localhost:8080/api/ai/ticket-advice/structured`, Body → raw → JSON:
+
+```json
+{"title":"프린터 연결 오류"}
+```
+
+브라우저 주소창에서 해당 URL을 열면 GET 요청이므로 405 Method Not Allowed가 발생한다. 이는 Postman의 POST 요청이 대기하던 현상과 별개다.
+
+검증 명령:
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-api
+.\mvnw.cmd "-Dtest=TicketAdviceControllerTest" test
+.\mvnw.cmd test
+cd ..
+git diff --check
+git status --short
+```
+
+사용자 확인 결과: 컨트롤러 테스트 6개, 백엔드 전체 48개 통과. 서비스 파일의 줄 끝 공백을 제거한 뒤 git diff --check도 출력 없이 완료됐다. 컨트롤러 테스트는 가짜 서비스의 전용 예외를 503으로 변환하는 부분을 확인했고, 실제 연결 실패부터 화면 복구까지는 수동 실습으로 확인했다.
+
 ### 수업 기록 추가 양식
 
 ```text

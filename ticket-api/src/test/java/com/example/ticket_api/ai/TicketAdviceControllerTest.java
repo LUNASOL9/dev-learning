@@ -6,6 +6,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.ResourceAccessException;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -125,13 +126,40 @@ class TicketAdviceControllerTest {
                 .content("""
                         {"title": "프린터 연결 오류"}
                         """))
-            .andExpect(status().isBadGateway())
+            .andExpect(status().isBadGateway()) //502
             .andExpect(content().contentTypeCompatibleWith(
                 MediaType.APPLICATION_JSON
             ))
             .andExpect(jsonPath("$.message").value(
                 "AI 답변을 올바르게 생성하지 못했습니다. 다시 요청해 주세요."
             ));
+    }
+
+
+
+
+    @Test
+    void returnsServiceUnavailableWhenAiConnectionFails() throws Exception {
+        // 실제 연결 대신, 서비스가 연결 실패 예외를 던지는 상황을 준비
+        when(adviceService.suggestStructured("프린터 연결 오류"))
+            .thenThrow(new AiServiceUnavailableException(
+                new ResourceAccessException("테스트용 연결 실패")
+            ));
+
+        mockMvc.perform(post("/api/ai/ticket-advice/structured")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "프린터 연결 오류"}
+                        """))
+            .andExpect(status().isServiceUnavailable())//503
+            .andExpect(content().contentTypeCompatibleWith(
+                MediaType.APPLICATION_JSON
+            ))
+            .andExpect(jsonPath("$.message").value(
+                "AI 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요."
+            ));
+
+        verify(adviceService).suggestStructured("프린터 연결 오류");
     }
 
 }//class
