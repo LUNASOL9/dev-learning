@@ -3,6 +3,7 @@ package com.example.ticket_api.ai;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
+import io.netty.handler.timeout.ReadTimeoutException;
 
 @Service
 public class TicketAdviceService {
@@ -30,6 +31,20 @@ public class TicketAdviceService {
 
 
 
+    private boolean isReadTimeout(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if(current instanceof ReadTimeoutException){
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+
+
+
     public TicketAdviceResult suggestStructured(String title){
 
         TicketAdviceResult result;
@@ -48,6 +63,11 @@ public class TicketAdviceService {
                 // Spring AI는 DTO 구조에 맞는 응답 형식을 모델에 안내하고, 받은 응답을 Java 객체로 변환. 공식 문서에서도 record를 이렇게 받는 방법을 설명
                 .entity(TicketAdviceResult.class);  // 지정한 Java 타입으로 변환해 받기
         }catch(ResourceAccessException exception){
+
+            if(isReadTimeout(exception)){
+                throw new AiResponseTimeoutException(exception);
+            }
+
             throw new  AiServiceUnavailableException(exception);
             //아래의 검증·반환은 실행되지 않음
         }

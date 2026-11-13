@@ -52,6 +52,7 @@ public class AiExceptionHandler {
 
 
 
+
     //모델 연결 문제로 AI 기능을 제공할 수 없음     예) LLM 서버가 꺼져 있음
     @ExceptionHandler(AiServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleAiServiceUnavailable(
@@ -62,4 +63,15 @@ public class AiExceptionHandler {
             .body(new ErrorResponse(exception.getMessage()));
     }
 
+
+
+
+    @ExceptionHandler(AiResponseTimeoutException.class)
+    public ResponseEntity<ErrorResponse> handleAiResponseTimeout(
+        AiResponseTimeoutException exception) {
+
+        return ResponseEntity
+            .status(HttpStatus.GATEWAY_TIMEOUT) //504
+            .body(new ErrorResponse(exception.getMessage()));
+    }
 }//class

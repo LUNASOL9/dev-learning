@@ -713,6 +713,48 @@ git status --short
 
 사용자 확인 결과: 컨트롤러 테스트 6개, 백엔드 전체 48개 통과. 서비스 파일의 줄 끝 공백을 제거한 뒤 git diff --check도 출력 없이 완료됐다. 컨트롤러 테스트는 가짜 서비스의 전용 예외를 503으로 변환하는 부분을 확인했고, 실제 연결 실패부터 화면 복구까지는 수동 실습으로 확인했다.
 
+### 2026-11-13: Ollama 응답 읽기 제한과 HTTP 504 안내
+
+연결은 됐지만 응답이 늦는 상황을 연결 실패와 구분했다. 추가 라이브러리 설치 없이 HTTP 클라이언트 설정을 추가했다.
+
+```properties
+spring.http.clients.connect-timeout=5s
+spring.http.clients.read-timeout=120s
+spring.ai.retry.max-attempts=1
+```
+
+connect-timeout은 연결 수립 대기, read-timeout은 응답 읽기 대기를 제한한다. max-attempts는 첫 시도를 포함한 횟수 제한이다. 이 HTTP 설정은 Ollama 전용이 아니며 해당 기본 설정을 사용하는 다른 HTTP 클라이언트에도 영향을 줄 수 있다. 읽기 제한은 브라우저 클릭부터 화면 표시까지 전체 작업의 정확한 제한 시간이 아니다. 브라우저 자체의 대기 제한은 아직 추가하지 않았다.
+
+집에서 추론 모드를 켰을 때 반복 요청도 약 75초, 껐을 때 약 20초 걸렸다는 관찰을 바탕으로 120초를 임시 실습 기준으로 정했다. 품질 비교 전이므로 추론을 끄는 옵션은 추가하지 않았다.
+
+- 서비스의 ResourceAccessException 처리에서 getCause()로 원인을 따라가며 Netty ReadTimeoutException을 검사한다.
+- 읽기 시간 초과이면 AiResponseTimeoutException으로 변환하고, 그 외 I/O 실패는 기존 AiServiceUnavailableException으로 처리한다.
+- AiExceptionHandler는 시간 초과 예외를 HTTP 504와 "AI 응답 대기 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요." 메시지로 변환한다.
+- 이번 원인 검사는 실제 관찰한 Netty 예외를 대상으로 한다. HTTP 클라이언트 변경 시 예외 종류를 재확인한다.
+
+재현 순서: Ollama를 켜 둔 채 read-timeout을 임시로 1s로 변경하고 Spring 서버를 재시작한다. Postman으로 POST http://localhost:8080/api/ai/ticket-advice/structured에 JSON 본문을 전송한다.
+
+```json
+{"title":"프린터 연결 오류"}
+```
+
+처음에는 ResourceAccessException의 원인으로 ReadTimeoutException이 나타나고 기존 503 안내가 반환됐다. Postman 전체 시간은 4.83초였으며, 이것을 읽기 제한 값과 동일한 시간으로 해석하지 않는다. 시간 초과 구분 코드를 추가한 뒤 사용자가 실제 504와 시간 초과 메시지를 확인했다. 실험 후 read-timeout=120s로 원복하고 서버 재시작까지 완료했다.
+
+실행·검증 명령:
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-api
+.\mvnw.cmd spring-boot:run
+# 서버 종료 후 또는 별도 터미널에서 테스트
+.\mvnw.cmd "-Dtest=TicketAdviceControllerTest" test
+.\mvnw.cmd test
+cd ..
+git diff --check
+git status --short
+```
+
+사용자 확인 결과: 컨트롤러 테스트 7개, 백엔드 전체 49개 통과. 컨트롤러 테스트는 가짜 서비스가 이미 변환된 AiResponseTimeoutException을 던지게 하므로 원인 판별 자체를 검사하지 않는다. 원인 판별부터 504 반환까지는 실제 시간 초과 재현으로 확인했다. 문서 기록 시 설정의 120s 원복과 git diff --check 통과도 확인했다.
+
 ### 수업 기록 추가 양식
 
 ```text

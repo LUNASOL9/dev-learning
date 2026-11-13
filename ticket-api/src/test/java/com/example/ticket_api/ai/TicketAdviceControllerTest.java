@@ -162,4 +162,26 @@ class TicketAdviceControllerTest {
         verify(adviceService).suggestStructured("프린터 연결 오류");
     }
 
+    @Test
+    void returnsGatewayTimeoutWhenAiResponseIsSlow() throws Exception {
+        // 1. suggestStructured("프린터 연결 오류")가
+        //    AiResponseTimeoutException을 던지도록 설정
+        when(adviceService.suggestStructured("프린터 연결 오류"))
+            .thenThrow(new AiResponseTimeoutException(new RuntimeException("테스트용 시간 초과")));
+
+        // 2. 구조화된 API에 정상 제목으로 POST 요청
+        mockMvc.perform(post("/api/ai/ticket-advice/structured")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "프린터 연결 오류"}
+                        """))
+                .andExpect(status().isGatewayTimeout())//504
+                .andExpect(content().contentTypeCompatibleWith(
+                    MediaType.APPLICATION_JSON
+                ))
+                .andExpect(jsonPath("$.message").value(
+                "AI 응답 대기 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요."
+                ));
+    }
+
 }//class
