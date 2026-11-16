@@ -1,9 +1,11 @@
 package com.example.ticket_api.ai;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import io.netty.handler.timeout.ReadTimeoutException;
+import tools.jackson.databind.exc.MismatchedInputException;
 
 @Service
 public class TicketAdviceService {
@@ -72,6 +74,9 @@ public class TicketAdviceService {
                     예시는 구체성의 기준이며, 모든 티켓에 서버 점검을 제안하라는 뜻은 아니야.
                     """)
                 .user("업무 티켓 제목: " + title)
+                .options(
+                    OllamaChatOptions.builder().disableThinking()
+                )
                 .call()
                 // Spring AI는 DTO 구조에 맞는 응답 형식을 모델에 안내하고, 받은 응답을 Java 객체로 변환. 공식 문서에서도 record를 이렇게 받는 방법을 설명
                 .entity(TicketAdviceResult.class);  // 지정한 Java 타입으로 변환해 받기
@@ -83,6 +88,13 @@ public class TicketAdviceService {
 
             throw new  AiServiceUnavailableException(exception);
             //아래의 검증·반환은 실행되지 않음
+        }catch(MismatchedInputException exception) {
+            // 모델 응답을 TicketAdviceResult로 변환하지 못한 경우
+            // 원래 변환 예외를 cause로 보관한다.
+            throw new InvalidAiResponseException(
+                "AI 응답을 지정한 형식으로 변환하지 못했습니다.",
+                exception
+            );
         }
 
         adviceValidator.validate(result);

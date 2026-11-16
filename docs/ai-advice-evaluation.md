@@ -105,7 +105,6 @@ P2: P1에 다음 예시를 추가했다. 현재 서비스에 적용된 실험 �
 .options(
     OllamaChatOptions.builder()
         .disableThinking()
-        .build()
 )
 ```
 

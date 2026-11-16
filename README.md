@@ -795,6 +795,26 @@ git status --short
 
 다음에는 집 모델의 정확한 태그를 확인한 뒤 같은 PC·입력·프롬프트에서 모델을 비교한다. 회사와 집의 속도를 그대로 모델 성능 차이로 해석하지 않는다. 목표는 의미에 맞는 분류, 구체적인 점검 행동, 원인 단정 방지, 상태 확인 우선, 정확하고 중복 없는 표현이다.
 
+### 2026-11-16: 모델 응답 변환 실패 처리와 추론 Off 적용
+
+빈 모델 응답을 DTO로 변환할 때 발생한 `MismatchedInputException`을 서비스에서 `InvalidAiResponseException`으로 바꾸고 원인 예외를 보존했다. 기존 예외 핸들러가 이를 HTTP 502와 사용자 안내로 반환한다. 모든 JSON 오류를 포괄적으로 처리한 것은 아니다.
+
+`TicketAdviceServiceTest`는 가짜 ChatModel과 실제 ChatClient를 사용해 빈 응답의 예외 변환·cause 보존, 정상 JSON의 DTO 반환을 검사한다. 가짜 모델의 `getOptions()`가 null을 반환하면 변환 전에 NPE가 발생하므로 기본 옵션 객체를 반환하도록 설정했다.
+
+구조화된 요청에 `OllamaChatOptions.builder().disableThinking()`을 전달했다. 현재 Spring AI 2.0.2의 `ChatClient.options()`는 빌더를 받으므로 여기에 `.build()`를 붙이지 않는다. 가짜 모델의 `getOptions()`에는 완성된 옵션 객체를 반환하므로 그 설정에서는 `.build()`를 사용한다.
+
+집 PC의 추론 On/Off 결과와 품질 한계는 [평가 문서](docs/ai-advice-evaluation.md)에 기록했다. 회사 모델에서의 실제 추론 Off 응답 품질은 별도로 확인해야 한다.
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-api
+.\mvnw.cmd "-Dtest=TicketAdviceServiceTest" test
+.\mvnw.cmd test
+cd ..
+git diff --check
+```
+
+확인 결과: 서비스 테스트 2개와 백엔드 전체 51개 통과. 현재 로컬 코드에서 브라우저 제한 150초, 서버 읽기 제한 120s를 확인했다. 집 PC의 실행 환경 원복 여부와는 별개다. 추가 설치는 없었다.
+
 ### 수업 기록 추가 양식
 
 ```text
