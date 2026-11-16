@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import {act, cleanup, render, screen } from "@testing-library/react";
+import {act, cleanup, render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import TicketAdvice from "./TicketAdvice";
@@ -128,8 +128,8 @@ test("도움말 요청에 실패하면 오류를 표시하고 다시 요청할 �
 test("도움말 요청 중에는 버튼을 비활성화한다", async () => {
     const user = userEvent.setup();
 
-    // 나중에 우리가 직접 응답을 완료할 때 사용할 함수
-    let resolveAdvice!: (value: TicketAdviceResult) => void;//“문자열을 받는 함수를 나중에 resolveAdvice에 넣을 거야.”
+    // 나중에 직접 응답을 완료할 때 사용할 함수
+    let resolveAdvice!: (value: TicketAdviceResult) => void;//“TicketAdviceResult 타입을 받는 함수를 나중에 resolveAdvice에 넣을 거야.”
 
     // 아직 성공도 실패도 하지 않은, 대기 중인 Promise
     const pendingAdvice = new Promise<TicketAdviceResult>((resolve) => {
@@ -162,7 +162,7 @@ test("도움말 요청 중에는 버튼을 비활성화한다", async () => {
 
     // 이제 우리가 직접 응답을 도착시킨다.
     await act(async () => {
-        resolveAdvice({
+        resolveAdvice({// resolve(완료)
             category: "데이터베이스",
             checks: [
                 "데이터베이스 연결 로그를 확인하세요.",
@@ -182,4 +182,155 @@ test("도움말 요청 중에는 버튼을 비활성화한다", async () => {
     ).toBeEnabled();
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+});
+
+
+
+test("30초 동안 응답이 없으면 오래 기다린다는 안내를 표시한다", async () => {
+
+    //시간을 테스트가 제어하도록 변경
+    vi.useFakeTimers();
+
+    try {
+
+
+        // 응답 시점을 우리가 결정할 수 있도록 준비
+        //resolveAdvice 변수는 선언 시점에는 값이 없어도 나중에 반드시 초기화할 테니 걱정하지 마!
+        let resolveAdvice!: (value: TicketAdviceResult) => void;
+
+        const pendingAdvice = new Promise<TicketAdviceResult>((resolve) => {
+            resolveAdvice = resolve;
+        });
+
+        //fetchStructuredTicketAdvice 실행했을 때 실제 API를 호출하지 않고 pendingAdvice Promise를 반환
+        vi.mocked(fetchStructuredTicketAdvice)
+            .mockReturnValue(pendingAdvice);
+
+        render(<TicketAdvice title="프린터 연결 오류" />);
+
+        fireEvent.click(
+            screen.getByRole("button", {
+                name: "AI 도움말 요청",
+            })
+        );
+
+        expect(screen.getByRole("status")).toHaveTextContent(
+            "AI가 확인할 사항을 정리하고 있어요."
+        );
+
+        // 실제로 기다리지 않고 가상의 시간을 30초 진행
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(30_000);
+        });
+
+        expect(screen.getByRole("status")).toHaveTextContent(
+            "응답을 기다린 지 30초가 지났어요. 조금 더 기다려 주세요."
+        );
+
+        // 안내만 바뀌었을 뿐, 요청은 아직 진행 중
+        expect(
+            screen.getByRole("button", {
+                name: "AI 답변 생성 중…",
+            })
+        ).toBeDisabled();
+
+        // 응답을 완료하고 대기 안내가 사라지는지 확인
+        // act React 컴포넌트의 상태 변경이 모두 반영될 때까지 기다려 주는 함수
+        await act(async () => {
+            resolveAdvice({// resolve(완료)
+                category: "프린터",
+                checks: ["케이블 연결 확인", "드라이버 상태 확인"],
+            });
+        });
+
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+        expect(
+            screen.getByRole("button", {
+                name: "AI 도움말 요청",
+            })
+        ).toBeEnabled();
+    } finally {
+        // 테스트가 실패해도 정리하고 실제 타이머로 복구
+        cleanup();
+        vi.useRealTimers();
+    }
+});
+
+test("30초 전에 응답이 끝나면 대기 안내 타이머를 정리한다", async () => {
+
+  //가짜 타이머
+  vi.useFakeTimers();
+
+  try{
+    //대기 중인 Promise
+    let resolveAdvice!: (value: TicketAdviceResult) => void;
+
+    const pendingAdvice = new Promise<TicketAdviceResult>((resolve) => {
+        resolveAdvice = resolve;
+    });
+
+    //fetchStructuredTicketAdvice 실행했을 때 실제 API를 호출하지 않고 pendingAdvice Promise를 반환
+    vi.mocked(fetchStructuredTicketAdvice)
+        .mockReturnValue(pendingAdvice);
+
+    render(<TicketAdvice title="프린터 연결 오류" />);
+
+    fireEvent.click(
+        screen.getByRole("button", {
+            name: "AI 도움말 요청",
+        })
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+        "AI가 확인할 사항을 정리하고 있어요."
+    );
+
+    expect(
+            screen.getByRole("button", {
+                name: "AI 답변 생성 중…",
+            })
+    ).toBeDisabled();
+
+    // 실제로 기다리지 않고 가상의 시간을 10초 진행
+    await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    await act(async () => {
+        resolveAdvice({// resolve(완료)
+            category: "프린터",
+            checks: ["케이블 연결 확인", "드라이버 상태 확인"],
+        });
+    });
+
+    // 아직 예약된 30초가 되기 전인데 타이머가 없어야 한다.
+    // → Effect의 정리 함수가 취소했는지 확인
+    expect(vi.getTimerCount()).toBe(0);
+
+    // 답변 표시도 실제로 확인
+    expect(screen.getByText("케이블 연결 확인")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    //답변이 표시되고 role="status"가 없는지 확인.
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    //가상 시간을 추가로 30초 진행
+    await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    //대기 안내가 여전히 없고 버튼이 활성화돼 있는지 확인
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    expect(
+        screen.getByRole("button", {
+            name: "AI 도움말 요청",
+        })
+    ).toBeEnabled();
+
+  } finally{
+    cleanup();
+    vi.useRealTimers();
+  }
 });

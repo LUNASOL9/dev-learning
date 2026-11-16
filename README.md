@@ -755,6 +755,38 @@ git status --short
 
 사용자 확인 결과: 컨트롤러 테스트 7개, 백엔드 전체 49개 통과. 컨트롤러 테스트는 가짜 서비스가 이미 변환된 AiResponseTimeoutException을 던지게 하므로 원인 판별 자체를 검사하지 않는다. 원인 판별부터 504 반환까지는 실제 시간 초과 재현으로 확인했다. 문서 기록 시 설정의 120s 원복과 git diff --check 통과도 확인했다.
 
+### 2026-11-16: 브라우저 대기 제한과 오래 걸리는 요청 안내
+
+Spring의 Ollama 읽기 제한과 별개로 브라우저에도 대기 제한을 추가했다. 추가 설치는 없었다.
+
+- `fetchStructuredTicketAdvice()`에서 `AbortSignal.timeout(150_000)`을 만들고 fetch의 signal 옵션에 전달한다. 시간 초과 신호가 중단된 경우 한국어 안내로 바꾸고 `{ cause: error }`로 원래 오류를 보존한다. 그 외 오류는 그대로 전달한다.
+- 브라우저의 대기 중단이 Spring이나 Ollama 작업의 즉시 종료까지 보장하지는 않는다. 서버의 120초 읽기 제한도 유지한다. AbortSignal.timeout은 활성 시간 기준으로 동작하므로 문서 정지 등의 상황에서 정확한 경과 시간 보장은 아니다.
+- `TicketAdvice`에서 요청 후 30초가 지나면 “응답을 기다린 지 30초가 지났어요. 조금 더 기다려 주세요.”를 표시한다. 이 타이머는 요청을 중단하지 않고 안내 문구만 바꾼다.
+- isLoading 변경 시 이전 Effect의 정리 함수가 clearTimeout을 실행한다. 요청이 끝나면 새 Effect는 바로 종료해 새 타이머를 만들지 않는다. 컴포넌트 제거 시에도 정리한다. 타이머에서는 isLoading이 아니라 isWaitingLong을 true로 바꾼다.
+
+테스트에서 배운 내용:
+
+- 이미 중단된 신호와 실패하는 가짜 fetch를 준비해 시간 초과 안내·cause 보존·150초 설정·신호 전달을 확인했다. 실제로 150초를 기다리는 테스트는 아니다.
+- 중단되지 않은 신호에서는 네트워크 오류 객체를 그대로 전달하는지 확인했다.
+- 가짜 타이머로 30초 경과 안내와 응답 완료 후 안내 종료를 확인했다. userEvent와 가짜 타이머를 함께 사용한 테스트가 제한 시간에 걸려, 이 타이머 테스트의 클릭만 fireEvent로 변경하고 통과를 확인했다.
+- 10초에 응답을 완료한 직후 남은 타이머가 0개인지 확인했다. 추가 30초를 진행한 뒤에만 검사하면 타이머가 취소되지 않고 실행을 끝내도 통과할 수 있어 검사 위치를 수정했다.
+
+실행 위치와 명령:
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning\ticket-ui
+npm.cmd test -- src/ticket-advice-api.test.ts
+npm.cmd test -- src/TicketAdvice.test.tsx
+npm.cmd test
+npm.cmd run build
+npm.cmd run lint
+cd ..
+git diff --check
+git status --short
+```
+
+사용자 확인 결과: 프런트 테스트 총 22개 통과(API 티켓 3개, AI API 8개, AI 컴포넌트 5개, 폼 6개). 빌드·린트 통과. 문서 작성 시 diff 검사에서 테스트 파일 두 개의 줄 끝 공백과 파일 끝 추가 빈 줄이 발견돼 커밋 전 정리 대상으로 안내했다.
+
 ### 수업 기록 추가 양식
 
 ```text
