@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import io.netty.handler.timeout.ReadTimeoutException;
 import tools.jackson.databind.exc.MismatchedInputException;
+import tools.jackson.core.exc.StreamReadException;
 
 @Service
 public class TicketAdviceService {
@@ -88,7 +89,7 @@ public class TicketAdviceService {
 
             throw new  AiServiceUnavailableException(exception);
             //아래의 검증·반환은 실행되지 않음
-        }catch(MismatchedInputException exception) {
+        }catch(MismatchedInputException | StreamReadException exception) {
             // 모델 응답을 TicketAdviceResult로 변환하지 못한 경우
             // 원래 변환 예외를 cause로 보관한다.
             throw new InvalidAiResponseException(

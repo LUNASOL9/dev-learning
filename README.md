@@ -815,6 +815,24 @@ git diff --check
 
 확인 결과: 서비스 테스트 2개와 백엔드 전체 51개 통과. 현재 로컬 코드에서 브라우저 제한 150초, 서버 읽기 제한 120s를 확인했다. 집 PC의 실행 환경 원복 여부와는 별개다. 추가 설치는 없었다.
 
+### 2026-11-18: JSON 문법이 깨진 AI 응답 처리
+
+모델이 `{"category": }`처럼 값이 빠진 JSON을 반환하는 상황을 테스트로 재현했다. 기존 catch는 `MismatchedInputException`만 처리해 실제로 발생한 `StreamReadException`이 빠져나갔다. 두 예외를 멀티 catch(`|`)로 처리하여 `InvalidAiResponseException`으로 바꾸고 원인 예외를 보존하도록 확장했다. 기존 `AiExceptionHandler`가 이 예외를 HTTP 502와 사용자 안내 메시지로 변환한다.
+
+`wrapsMalformedJsonAsInvalidAiResponse`는 가짜 ChatModel이 잘못된 JSON을 반환하도록 설정하고, 실제 ChatClient의 변환과 서비스의 예외 처리를 실행한다. 변환된 예외의 메시지와 cause의 타입을 검증한다. 정상 응답·빈 응답 테스트도 함께 유지했다. 서비스 테스트는 HTTP를 직접 검증하지 않으며, HTTP 응답 처리는 기존 컨트롤러 테스트가 담당한다.
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning
+git switch -c feature/ai-malformed-response
+cd ticket-api
+.\mvnw.cmd "-Dtest=TicketAdviceServiceTest" test
+.\mvnw.cmd test
+cd ..
+git diff --check
+```
+
+사용자 확인 결과: 서비스 테스트 3개와 백엔드 전체 52개 통과. 추가 설치는 없었다. 다음 학습은 기존 티켓 조회 기능을 AI에 연결하는 도구 호출이다.
+
 ### 수업 기록 추가 양식
 
 ```text

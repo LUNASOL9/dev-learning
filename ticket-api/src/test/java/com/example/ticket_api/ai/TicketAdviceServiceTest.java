@@ -18,6 +18,7 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 
+import tools.jackson.core.exc.StreamReadException;
 import tools.jackson.databind.exc.MismatchedInputException;
 
 class TicketAdviceServiceTest {
@@ -113,6 +114,50 @@ class TicketAdviceServiceTest {
                 "드라이버 설치 상태를 확인하세요."
             ),
             adviceResult.checks()
+        );
+
+    }
+
+
+
+    @Test
+    void wrapsMalformedJsonAsInvalidAiResponse() {
+        String responseJson = """
+            {"category": }
+            """;//잘못된 JSON
+
+        // 1. 실제 Ollama 대신 사용할 가짜 모델
+        ChatModel model = mock(ChatModel.class);
+
+        // ChatClient가 모델의 옵션을 읽을 수 있도록 빈 기본 옵션을 반환
+        when(model.getOptions()).thenReturn(ChatOptions.builder().build());
+
+        ChatResponse malformedResponse = new ChatResponse(
+            List.of(new Generation(new AssistantMessage(responseJson)))
+        );
+
+        when(model.call(any(Prompt.class)))
+            .thenReturn(malformedResponse);
+
+        TicketAdviceService service = new TicketAdviceService(
+            ChatClient.builder(model)
+        );
+
+        // 4. 실제 변환 과정에서 발생한 오류가
+        //    우리 예외로 바뀌는지 확인
+        InvalidAiResponseException exception = assertThrows(
+            InvalidAiResponseException.class,
+            () -> service.suggestStructured("Json 오류")
+        );
+
+        assertEquals(
+            "AI 응답을 지정한 형식으로 변환하지 못했습니다.",
+            exception.getMessage()
+        );
+
+        assertInstanceOf(
+            StreamReadException.class,
+            exception.getCause()
         );
 
     }
