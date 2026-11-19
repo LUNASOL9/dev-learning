@@ -8,20 +8,19 @@ import org.springframework.stereotype.Component;
 @Profile("ai-demo")
 public class OllamaDemo implements CommandLineRunner{
 
-    private final TicketAdviceService ticketAdviceService;
+    private final TicketQueryService ticketQueryService;
 
-    public OllamaDemo(TicketAdviceService service){
-        this.ticketAdviceService = service;
+    public OllamaDemo(TicketQueryService ticketQueryService) {
+        this.ticketQueryService = ticketQueryService;
     }
 
     @Override
     public void run(String... arg){
+        String answer = ticketQueryService.answer(
+            "현재 미처리 티켓의 번호와 제목을 알려줘."
+        );
 
-        TicketAdviceResult  answer = ticketAdviceService.suggestStructured("프린터 연결 오류");
-
-        //System.out.println("[Ollama → Java] " + answer);
-        System.out.println("[AI 분류] " + answer.category());
-        System.out.println("[AI 확인 사항] " + answer.checks());
+        System.out.println("[AI 티켓 조회] " + answer);
 
     }// run
 }// class

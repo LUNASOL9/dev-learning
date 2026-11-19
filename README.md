@@ -833,6 +833,34 @@ git diff --check
 
 사용자 확인 결과: 서비스 테스트 3개와 백엔드 전체 52개 통과. 추가 설치는 없었다. 다음 학습은 기존 티켓 조회 기능을 AI에 연결하는 도구 호출이다.
 
+### 2026-11-19: AI가 기존 티켓 조회 도구를 사용하도록 연결
+
+`TicketTools`에 `@Tool` 메서드 두 개를 제공했다. `listTickets()`는 전체 티켓을, `listOpenTickets()`는 기존 `TicketService.findAll()` 결과에서 OPEN 티켓만 필터링하여 반환한다. `TicketQueryService`는 `.tools(ticketTools)`로 도구를 등록하고 추론 Off 옵션으로 질문한다. 기존 도움말 API와 별도로 만든 서비스이며 아직 조회 질문용 HTTP API와 전용 오류 처리는 추가하지 않았다.
+
+모델은 Java 코드나 DB를 직접 실행하지 않는다. 모델이 도구 호출을 요청하면 Spring AI가 Java 메서드를 실행하고 결과를 모델에 전달한다. 모델이 이를 읽어 최종 답변을 작성한다. 현재 `.call().content()` 방식으로 최종 문자열을 받으며 스트리밍은 사용하지 않는다. 프롬프트에 도구 사용을 지시해도 도구 선택과 최종 답변의 정확성이 보장되는 것은 아니다.
+
+`OllamaDemo`를 티켓 조회 서비스에 연결했다. 실습 중 전체 목록을 받은 모델이 OPEN 티켓 하나를 누락한 사례를 확인했다. 이후 두 조회 도구의 이름과 설명을 정리하고 재실행했을 때 `listOpenTickets()`가 실행됐으며, 도구 결과와 최종 답변 모두 36번·37번을 포함했다. 이는 해당 실행에서의 확인 결과이며 모든 요청의 정확성을 보장하지 않는다. 확인용 도구 로그는 실습 후 제거했다.
+
+```powershell
+cd C:\Users\luna\Documents\dev-learning
+git switch -c feature/ai-ticket-tools
+cd ticket-api
+.\mvnw.cmd compile
+# Ollama를 실행한 상태에서 데모 실행. 기존 Spring 서버는 먼저 Ctrl+C로 종료한다.
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=ai-demo"
+# 데모 서버를 종료한 뒤 테스트 실행
+.\mvnw.cmd "-Dtest=TicketToolsTest" test
+.\mvnw.cmd test
+cd ..
+git diff --check
+```
+
+추가 설치는 없었다. `ai-demo`의 CommandLineRunner가 답변을 출력한 후에도 웹 서버는 계속 실행된다. 같은 H2 파일 DB를 사용하는 서버를 추가로 시작하면 Database may be already in use 오류가 발생할 수 있다. 기존 서버를 종료한 뒤 다시 실행하며 DB 파일을 삭제하지 않는다.
+
+`TicketToolsTest`는 가짜 TicketService와 실제 TicketTools를 사용해 OPEN만 반환, OPEN이 없으면 빈 목록 반환, 상태와 관계없이 전체 반환을 검증한다. 모델의 도구 선택이나 답변 생성을 검증하는 테스트는 아니다. 사용자 확인 결과: 도구 테스트 3개와 백엔드 전체 55개 통과.
+
+다음 단계는 데모의 조회 질문을 HTTP API로 제공하고 입력 검증과 오류 처리를 연결하는 것이다.
+
 ### 수업 기록 추가 양식
 
 ```text
